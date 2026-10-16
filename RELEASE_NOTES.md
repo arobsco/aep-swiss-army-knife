@@ -7,6 +7,21 @@ can be traced to exactly what the code did at the time.
 
 ---
 
+## v3.4.10 — 2026-10-16
+
+**A hidden Dropped Field Index.** The dictionary is meant to be a census, so
+the schemas it leaves out are now inventoried too: every field of every
+dropped schema, with its dot-notation path, type and display name, the
+schema, why it was dropped, its dataset count and SQL table names. It is an
+inventory only, with no coverage or sample values. The Field Index header
+points to it for a field that isn't there. The Dropped Schemas tab gains a
+Fields count per schema ("could not be read" where the fetch failed).
+
+Cost in prod: about 2,800 extra schema fetches (~0.13s each, five or six
+minutes) and roughly 244,000 rows on a hidden tab.
+
+---
+
 ## v3.4.9 — 2026-10-16
 
 **A hidden Dropped Schemas tab.** v3.4.8's bug went unnoticed because a

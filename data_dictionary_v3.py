@@ -87,6 +87,11 @@ v3.2 -- Two things ship under this label:
     if its (huge) file manifest 504s under load, the failure is cached so the
     other Profile schemas fail fast instead of each re-hitting the dead snapshot.
 
+v3.4.10 -- A hidden Dropped Field Index: every field of every dropped schema
+(path, type, display name, the schema, why it was dropped, its tables), so the
+dictionary is a full census. Inventory only -- no coverage. Prod: ~244k rows,
+five or six extra minutes of schema fetches.
+
 v3.4.9 -- A hidden Dropped Schemas tab: every schema the filters left out,
 with the reason in plain English, its dataset count and SQL table name(s).
 Schemas that still hold data are listed first. A missing table can now be
@@ -227,7 +232,7 @@ from house_xlsx import Book
 # Constants
 # ----------------------------------------------------------------------------
 SCRIPT_NAME    = "data_dictionary_v3"
-SCRIPT_VERSION = "3.4.9"
+SCRIPT_VERSION = "3.4.10"
 SCRIPT_DATE    = "2026-10-16"
 SCRIPT_AUTHOR  = "Barry Mann (barrymann.com)"
 AUTHOR_SITE     = "https://barrymann.com"
@@ -1553,8 +1558,9 @@ def collect_sandbox(token, conf, sb):
                    status is KEEP / DROP:no-dataset / DROP:adhoc / DROP:ajo
       kept      -> list of kept schema dicts (see build below)
       dropped   -> list of dropped schema dicts (title, status, class,
-                   behaviour, datasets, tables, last_mod, id) for the hidden
-                   Dropped Schemas tab
+                   behaviour, datasets, tables, last_mod, id, fields) for the
+                   hidden Dropped Schemas / Dropped Field Index tabs; fields
+                   is [(path, type, display name)], or None if unreadable
       labels_n  -> count of alternateDisplayInfo (friendly-name) labels in the
                    sandbox -- not DULE governance labels
       stats     -> {total, kept, no_dataset, adhoc, ajo, fields, relationships}
@@ -1655,7 +1661,8 @@ def collect_sandbox(token, conf, sb):
             dropped.append({"title": stitle, "status": status, "class": cls,
                             "behaviour": behaviour(raw), "datasets": n_ds,
                             "tables": tables_by_schema.get(sid, []),
-                            "last_mod": lmod, "id": sid})
+                            "last_mod": lmod, "id": sid,
+                            "ref": raw.get("meta:altId") or sid})
             continue
 
         # --- Resolve the kept schema's fields + descriptor joins -------------
@@ -1733,6 +1740,29 @@ def collect_sandbox(token, conf, sb):
             "n_relationships": n_rels,
             "n_labels": n_labels,
         })
+
+    # Inventory of what was left out: the field list of every dropped schema
+    # (path, type, display name -- no coverage, no descriptor joins) for the
+    # hidden Dropped Field Index tab. About 0.1s a schema; prod's ~2,800 take
+    # five or six minutes. A failed fetch is recorded, not fatal.
+    if dropped:
+        logger.info(f"  {name}: listing the fields of {len(dropped)} dropped "
+                    f"schema(s) for the Dropped Field Index (no coverage) ...")
+        n_failed = 0
+        for i, d in enumerate(dropped, 1):
+            try:
+                full = get_full_schema(token, conf, name, d["ref"])
+                d["fields"] = [(p, t, ft) for p, t, ft, *_ in flatten_fields(full)]
+            except Exception as e:
+                d["fields"] = None
+                n_failed += 1
+                logger.warning(f"    {d['title']}: field list fetch failed ({e})")
+            if i % 500 == 0:
+                logger.info(f"    {i}/{len(dropped)} dropped schemas listed ...")
+        n_rows = sum(len(d["fields"] or []) for d in dropped)
+        logger.info(f"  {name}: {n_rows:,} fields across {len(dropped)} dropped "
+                    f"schema(s)" + (f"; {n_failed} could not be read" if n_failed
+                                    else "") + ".")
 
     return {
         "title": title, "name": name, "env": env,
@@ -2513,7 +2543,8 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
     # up front so the Field Index and Schemas index can name each schema's tab.
     used = {"summary", "how to use", "schemas", "field index", "datasets",
             "audiences", "snapshot summary", "snapshot tables",
-            "overlap cut-list", "overlap full report", "dropped schemas"}
+            "overlap cut-list", "overlap full report", "dropped schemas",
+            "dropped field index"}
     tabbed = []  # (res, k, sheet_name)
     for res in results:
         for k in res["kept"]:
@@ -2584,7 +2615,8 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
         r += 1
     autofit(ws, [24, 6, 13, 7, 19, 15, 13, 15, 13, 12, 14, 12])
     ws.cell(r, 1, "Every dropped schema -- why it was left out, and its SQL "
-            "table name(s) -- is on the hidden 'Dropped Schemas' tab "
+            "table name(s) -- is on the hidden 'Dropped Schemas' tab, and "
+            "every one of their fields on the hidden 'Dropped Field Index' "
             "(right-click any tab > Unhide).").font = Font(italic=True,
                                                           color="666666")
     r += 1
@@ -2667,6 +2699,11 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
          "Adobe plumbing, tests, and schemas no dataset uses. Right-click any "
          "tab > Unhide to see it, then filter the SQL table name column. "
          "Schemas that still hold data are listed first."),
+        ("...find a field that isn't in the Field Index",
+         "Dropped Field Index (hidden)",
+         "Every field of every dropped schema: dot-notation path, type and "
+         "display name, with the schema, why it was dropped and its tables. "
+         "An inventory only -- no coverage or sample values."),
         ("...understand one schema in detail",
          "Its own tab",
          "The schema's description, then every field with its type, friendly "
@@ -2819,7 +2856,10 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
     fi["A2"] = f"Field Index  -  {label}"
     fi["A2"].font = title_font
     fi["A3"] = ("Every field across all schemas. Look up an exact dot-notation "
-                "path (Ctrl-F); the Tab column says which sheet it lives on.")
+                "path (Ctrl-F); the Tab column says which sheet it lives on. "
+                "Not here? Fields of the schemas left out of this workbook are "
+                "on the hidden 'Dropped Field Index' tab (right-click any tab "
+                "> Unhide).")
     fi["A3"].font = Font(italic=True, color="666666")
     hr = 5
     for c, nm in enumerate(FIELD_INDEX_COLUMNS, 1):
@@ -2957,8 +2997,8 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
                 "(Filtering).")
     dr["A3"].font = Font(italic=True, color="666666")
     DROPPED_COLUMNS = ["Sandbox", "Schema", "Drop reason", "Why",
-                       "Datasets", "SQL table name(s)", "Class", "Behaviour",
-                       "Last Modified", "Schema $id"]
+                       "Datasets", "SQL table name(s)", "Fields", "Class",
+                       "Behaviour", "Last Modified", "Schema $id"]
     hr = 5
     for c, nm in enumerate(DROPPED_COLUMNS, 1):
         dr.cell(hr, c, nm)
@@ -2968,14 +3008,55 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
         for d in sorted(res.get("dropped") or [],
                         key=lambda x: (0 if x["datasets"] else 1, x["status"],
                                        x["title"].strip().lower())):
+            nf = d.get("fields")
             row = [res["title"], d["title"], d["status"].split(":", 1)[1],
                    DROP_REASONS.get(d["status"], ""), d["datasets"],
-                   _sql_table_names(d), d["class"], d["behaviour"],
-                   d["last_mod"], d["id"]]
+                   _sql_table_names(d),
+                   len(nf) if nf is not None else "could not be read",
+                   d["class"], d["behaviour"], d["last_mod"], d["id"]]
             for c, val in enumerate(row, 1):
                 dr.cell(rr, c, val)
             rr += 1
-    autofit(dr, [18, 50, 12, 60, 9, 44, 30, 12, 16, 58])
+    autofit(dr, [18, 50, 12, 60, 9, 44, 9, 30, 12, 16, 58])
+
+    # ---- Dropped Field Index (hidden): the fields of every dropped schema ---
+    # The census half of the story: names and types only -- no coverage, no
+    # identities -- so a field that lives in a dropped schema still shows up
+    # somewhere when searched for. A quarter of a million rows in prod, so it
+    # is hidden.
+    dfi = wb.create_sheet("Dropped Field Index")
+    dfi.sheet_state = "hidden"
+    confidential(dfi)
+    dfi["A2"] = f"Dropped Field Index  -  {label}"
+    dfi["A2"].font = title_font
+    dfi["A3"] = ("Every field of every schema left out of this workbook (see "
+                 "Dropped Schemas for why). An inventory only: dot-notation "
+                 "path, type and display name, with no coverage or sample "
+                 "values. Filter Datasets > 0 for the schemas that still hold "
+                 "data.")
+    dfi["A3"].font = Font(italic=True, color="666666")
+    DROPPED_FIELD_COLUMNS = ["Field (dot notation)", "Data Type",
+                             "Friendly Name", "Schema", "Drop reason",
+                             "Datasets", "SQL table name(s)", "Sandbox"]
+    hr = 5
+    for c, nm in enumerate(DROPPED_FIELD_COLUMNS, 1):
+        dfi.cell(hr, c, nm)
+    style_header(dfi, len(DROPPED_FIELD_COLUMNS), row=hr)
+    drows = []
+    for res in results:
+        for d in res.get("dropped") or []:
+            reason = d["status"].split(":", 1)[1]
+            tnames = _sql_table_names(d)
+            for fpath, dtype, friendly in d.get("fields") or []:
+                drows.append((fpath, dtype, friendly, d["title"], reason,
+                              d["datasets"], tnames, res["title"]))
+    drows.sort(key=lambda x: (x[0].lower(), x[3].strip().lower()))
+    # Explicit rows, not append(): style_header's freeze pane has already
+    # touched the row under the header, so append() would leave it blank.
+    for rr, row in enumerate(drows, hr + 1):
+        for c, val in enumerate(row, 1):
+            dfi.cell(rr, c, val)
+    autofit(dfi, [52, 18, 28, 50, 12, 9, 44, 18])
 
     # ---- Audiences tab: what the business does WITH the data ----------------
     # Completes the chain: schema -> dataset -> audience -> the rule behind it.

@@ -672,7 +672,13 @@ silently excluded. Since v3.4.9 every dropped schema is also in the workbook,
 on a **hidden `Dropped Schemas` tab** (right-click any tab › Unhide): the
 reason in plain English, how many datasets use it and their SQL table names,
 with the schemas that still hold data listed first. If a table you query has
-no tab, filter that tab's table-name column and it says why. All the match
+no tab, filter that tab's table-name column and it says why. Since v3.4.10 a
+second hidden tab, **`Dropped Field Index`**, lists every field of every
+dropped schema (dot-notation path, type, display name, the schema, why it was
+dropped and its tables) so the workbook is a full census: a field that isn't
+in the Field Index is still findable. Inventory only, with no coverage
+sampling. In prod that is about 244,000 rows and five or six extra minutes
+of schema fetches. All the match
 lists are constants at the top of the script; tune them and re-run. (On the
 large prod sandbox this takes a couple of thousand schemas down to a few
 dozen.)
