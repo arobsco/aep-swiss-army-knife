@@ -668,9 +668,14 @@ verdict, so you can see exactly what was excluded and why:
 When in doubt the rules drop, not keep — every dropped schema is printed with
 its reason, and the per-reason counts (including the `Schema for audience…`
 tally) are echoed to screen and written to the Summary tab, so nothing is
-silently excluded. All the match lists are constants at the top of the script;
-tune them and re-run. (On the large prod sandbox this takes a couple of thousand schemas
-down to 27.)
+silently excluded. Since v3.4.9 every dropped schema is also in the workbook,
+on a **hidden `Dropped Schemas` tab** (right-click any tab › Unhide): the
+reason in plain English, how many datasets use it and their SQL table names,
+with the schemas that still hold data listed first. If a table you query has
+no tab, filter that tab's table-name column and it says why. All the match
+lists are constants at the top of the script; tune them and re-run. (On the
+large prod sandbox this takes a couple of thousand schemas down to a few
+dozen.)
 
 For each kept schema it resolves the **full field list** (dot notation + data
 type), and joins the sandbox's **descriptors**: identity fields, relationships

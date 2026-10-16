@@ -7,6 +7,19 @@ can be traced to exactly what the code did at the time.
 
 ---
 
+## v3.4.9 — 2026-10-16
+
+**A hidden Dropped Schemas tab.** v3.4.8's bug went unnoticed because a
+dropped schema left no trace in the workbook: the reasons were printed to the
+console and then gone. Every schema the filters leave out is now listed on a
+hidden **Dropped Schemas** tab (right-click any tab › Unhide) with the drop
+reason in plain English, how many datasets use it, their SQL table names, its
+class and behaviour (ad-hoc / record / time-series). Schemas that still hold
+data come first, so a table you query that has no tab is easy to find, along
+with the reason it was dropped. The Summary and How to Use tabs point to it.
+
+---
+
 ## v3.4.8 — 2026-10-16
 
 **Lookup schemas are back.** Every class whose id ended in a long hex string

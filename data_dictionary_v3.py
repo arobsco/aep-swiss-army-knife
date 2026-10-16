@@ -87,6 +87,11 @@ v3.2 -- Two things ship under this label:
     if its (huge) file manifest 504s under load, the failure is cached so the
     other Profile schemas fail fast instead of each re-hitting the dead snapshot.
 
+v3.4.9 -- A hidden Dropped Schemas tab: every schema the filters left out,
+with the reason in plain English, its dataset count and SQL table name(s).
+Schemas that still hold data are listed first. A missing table can now be
+looked up instead of guessed at (which is how v3.4.8's bug went unseen).
+
 v3.4.8 -- Lookup schemas are back. Any class whose id ended in a long hex
 string was dropped as ad-hoc, but a custom class made in the UI gets the same
 kind of id -- so every lookup (Tesco Product Lookup, Marketplace Product,
@@ -222,7 +227,7 @@ from house_xlsx import Book
 # Constants
 # ----------------------------------------------------------------------------
 SCRIPT_NAME    = "data_dictionary_v3"
-SCRIPT_VERSION = "3.4.8"
+SCRIPT_VERSION = "3.4.9"
 SCRIPT_DATE    = "2026-10-16"
 SCRIPT_AUTHOR  = "Barry Mann (barrymann.com)"
 AUTHOR_SITE     = "https://barrymann.com"
@@ -407,6 +412,20 @@ TEST_TITLE_PATTERNS = [
     r"^jai ",
 ]
 _TEST_RE = re.compile("|".join(TEST_TITLE_PATTERNS), re.I)
+
+# Plain-English reason for each DROP verdict, on the hidden Dropped Schemas tab.
+DROP_REASONS = {
+    "DROP:adhoc":      "Auto-generated ad-hoc schema: built on the ad-hoc "
+                       "behaviour, or an auto-created title ('Schema for "
+                       "audience...', 'XDM Schema for dataset...').",
+    "DROP:ajo":        "Managed by Adobe Journey Optimizer (AO / AJO title, or "
+                       "an AJO class or field group).",
+    "DROP:system":     "Adobe-managed plumbing, not the customer's own model "
+                       "(Offer Decisioning, CJA, Audience Portal, Journey "
+                       "Orchestration, Campaign recipients).",
+    "DROP:test":       "Title looks like a test, POC or placeholder.",
+    "DROP:no-dataset": "No dataset uses it, so it holds no data.",
+}
 
 KNOWN_CLASSES = {
     "https://ns.adobe.com/xdm/context/profile": "XDM Individual Profile",
@@ -1357,6 +1376,18 @@ def is_adhoc(raw: dict) -> bool:
     return any(s in title for s in ADHOC_TITLE_SUBSTRINGS)
 
 
+def behaviour(raw: dict) -> str:
+    """The XDM behaviour a schema extends: ad-hoc / record / time-series, or ''
+    when the listing doesn't say."""
+    extends = raw.get("meta:extends") or []
+    if raw.get("meta:class") == ADHOC_CLASS or ADHOC_CLASS in extends:
+        return "ad-hoc"
+    for b in REAL_BEHAVIOURS:
+        if b in extends:
+            return b.rsplit("/", 1)[-1]
+    return ""
+
+
 def is_ajo(raw: dict) -> bool:
     title = (raw.get("title") or "").strip().lower()
     if any(title.startswith(p) for p in AJO_TITLE_PREFIXES):
@@ -1521,6 +1552,9 @@ def collect_sandbox(token, conf, sb):
       verdicts  -> list of (title, class_name, datasets, last_mod, status)
                    status is KEEP / DROP:no-dataset / DROP:adhoc / DROP:ajo
       kept      -> list of kept schema dicts (see build below)
+      dropped   -> list of dropped schema dicts (title, status, class,
+                   behaviour, datasets, tables, last_mod, id) for the hidden
+                   Dropped Schemas tab
       labels_n  -> count of alternateDisplayInfo (friendly-name) labels in the
                    sandbox -- not DULE governance labels
       stats     -> {total, kept, no_dataset, adhoc, ajo, fields, relationships}
@@ -1581,6 +1615,7 @@ def collect_sandbox(token, conf, sb):
 
     verdicts = []
     kept = []
+    dropped = []
     stats = {"total": len(raws), "kept": 0, "no_dataset": 0, "adhoc": 0,
              "audience": 0, "ajo": 0, "system": 0, "test": 0, "fields": 0,
              "relationships": 0}
@@ -1615,6 +1650,12 @@ def collect_sandbox(token, conf, sb):
 
         verdicts.append((stitle, cls, n_ds, lmod, status))
         if status != "KEEP":
+            # Kept for the hidden Dropped Schemas tab, so a missing schema can
+            # be looked up instead of wondered about.
+            dropped.append({"title": stitle, "status": status, "class": cls,
+                            "behaviour": behaviour(raw), "datasets": n_ds,
+                            "tables": tables_by_schema.get(sid, []),
+                            "last_mod": lmod, "id": sid})
             continue
 
         # --- Resolve the kept schema's fields + descriptor joins -------------
@@ -1695,7 +1736,8 @@ def collect_sandbox(token, conf, sb):
 
     return {
         "title": title, "name": name, "env": env,
-        "verdicts": verdicts, "kept": kept, "datasets": ds_all,
+        "verdicts": verdicts, "kept": kept, "dropped": dropped,
+        "datasets": ds_all,
         "labels_n": len(labels), "stats": stats,
     }
 
@@ -2471,7 +2513,7 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
     # up front so the Field Index and Schemas index can name each schema's tab.
     used = {"summary", "how to use", "schemas", "field index", "datasets",
             "audiences", "snapshot summary", "snapshot tables",
-            "overlap cut-list", "overlap full report"}
+            "overlap cut-list", "overlap full report", "dropped schemas"}
     tabbed = []  # (res, k, sheet_name)
     for res in results:
         for k in res["kept"]:
@@ -2541,6 +2583,11 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
             ws.cell(r, c, val).alignment = center
         r += 1
     autofit(ws, [24, 6, 13, 7, 19, 15, 13, 15, 13, 12, 14, 12])
+    ws.cell(r, 1, "Every dropped schema -- why it was left out, and its SQL "
+            "table name(s) -- is on the hidden 'Dropped Schemas' tab "
+            "(right-click any tab > Unhide).").font = Font(italic=True,
+                                                          color="666666")
+    r += 1
 
     # ---- Data completeness: what's MISSING ----------------------------------
     # On a --data-dict run, list every schema whose coverage is not trustworthy
@@ -2614,6 +2661,12 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
          "Maps each dataset's friendly name to its SQL table name. Use the "
          "TABLE NAME in FROM, not the friendly name -- they differ. The "
          "Profile column flags what feeds Real-Time Customer Profile."),
+        ("...find a schema or table that has no tab",
+         "Dropped Schemas (hidden)",
+         "Every schema left out of this workbook and why: ad-hoc dumps, AJO, "
+         "Adobe plumbing, tests, and schemas no dataset uses. Right-click any "
+         "tab > Unhide to see it, then filter the SQL table name column. "
+         "Schemas that still hold data are listed first."),
         ("...understand one schema in detail",
          "Its own tab",
          "The schema's description, then every field with its type, friendly "
@@ -2887,6 +2940,42 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
             dt.cell(rr, 13, d.get("id"))
             rr += 1
     autofit(dt, [18, 40, 9, 42, 50, 44, 26, 13, 15, 13, 11, 13, 34])
+
+    # ---- Dropped Schemas (hidden): everything the filters left out ----------
+    # Hidden because it runs to thousands of ad-hoc rows nobody reads day to
+    # day -- but when a table is missing, this says why instead of leaving it
+    # to be guessed. Schemas that still hold data come first.
+    dr = wb.create_sheet("Dropped Schemas")
+    dr.sheet_state = "hidden"
+    confidential(dr)
+    dr["A2"] = f"Dropped schemas  -  {label}"
+    dr["A2"].font = title_font
+    dr["A3"] = ("Every schema the filters left out of this workbook, and why. "
+                "Rows with datasets come first: those hold data, so if a table "
+                "you query has no tab, it is here. Filter the SQL table name "
+                "column to find it. The filter rules are in README.md "
+                "(Filtering).")
+    dr["A3"].font = Font(italic=True, color="666666")
+    DROPPED_COLUMNS = ["Sandbox", "Schema", "Drop reason", "Why",
+                       "Datasets", "SQL table name(s)", "Class", "Behaviour",
+                       "Last Modified", "Schema $id"]
+    hr = 5
+    for c, nm in enumerate(DROPPED_COLUMNS, 1):
+        dr.cell(hr, c, nm)
+    style_header(dr, len(DROPPED_COLUMNS), row=hr)
+    rr = hr + 1
+    for res in results:
+        for d in sorted(res.get("dropped") or [],
+                        key=lambda x: (0 if x["datasets"] else 1, x["status"],
+                                       x["title"].strip().lower())):
+            row = [res["title"], d["title"], d["status"].split(":", 1)[1],
+                   DROP_REASONS.get(d["status"], ""), d["datasets"],
+                   _sql_table_names(d), d["class"], d["behaviour"],
+                   d["last_mod"], d["id"]]
+            for c, val in enumerate(row, 1):
+                dr.cell(rr, c, val)
+            rr += 1
+    autofit(dr, [18, 50, 12, 60, 9, 44, 30, 12, 16, 58])
 
     # ---- Audiences tab: what the business does WITH the data ----------------
     # Completes the chain: schema -> dataset -> audience -> the rule behind it.
