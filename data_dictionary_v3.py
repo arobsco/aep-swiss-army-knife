@@ -87,6 +87,10 @@ v3.2 -- Two things ship under this label:
     if its (huge) file manifest 504s under load, the failure is cached so the
     other Profile schemas fail fast instead of each re-hitting the dead snapshot.
 
+v3.4.11 -- The run holds Windows awake (system and screen) until it ends, so
+Modern Standby can't freeze a long run part-way. The hold dies with the
+process; power settings are untouched.
+
 v3.4.10 -- A hidden Dropped Field Index: every field of every dropped schema
 (path, type, display name, the schema, why it was dropped, its tables), so the
 dictionary is a full census. Inventory only -- no coverage. Prod: ~244k rows,
@@ -232,7 +236,7 @@ from house_xlsx import Book
 # Constants
 # ----------------------------------------------------------------------------
 SCRIPT_NAME    = "data_dictionary_v3"
-SCRIPT_VERSION = "3.4.10"
+SCRIPT_VERSION = "3.4.11"
 SCRIPT_DATE    = "2026-10-16"
 SCRIPT_AUTHOR  = "Barry Mann (barrymann.com)"
 AUTHOR_SITE     = "https://barrymann.com"
@@ -3682,6 +3686,27 @@ def run(service: str, sandbox_arg: str | None,
                 f"{len(results)} sandbox(es).")
 
 
+def keep_awake(on: bool) -> bool:
+    """Hold Windows awake for the length of the run, or release the hold.
+
+    A full run is long enough for the PC to fall asleep part-way: on
+    2026-10-16 Modern Standby froze prod's run for 76 minutes. On a Modern
+    Standby machine the screen going off IS the trigger, so the display is
+    held on as well as the system. The hold belongs to this process and dies
+    with it, so nothing about the machine's power settings changes. Closing
+    the lid or pressing the power button still sleeps. Returns True when the
+    hold was taken (Windows only)."""
+    if sys.platform != "win32":
+        return False
+    ES_CONTINUOUS, ES_SYSTEM_REQUIRED, ES_DISPLAY_REQUIRED = 0x80000000, 0x1, 0x2
+    flags = ES_CONTINUOUS | ((ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED) if on else 0)
+    try:
+        import ctypes
+        return bool(ctypes.windll.kernel32.SetThreadExecutionState(flags))
+    except Exception:
+        return False
+
+
 def print_banner() -> None:
     bar = ANSI["cyan"] + "=" * 72 + ANSI["reset"]
     print(bar)
@@ -3742,8 +3767,16 @@ def main():
         logger.info("Nothing chosen. Exiting.")
         return
 
-    run(chosen, sandbox_arg, dd_scope, dd_rows,
-        profile_snapshot=profile_snapshot)
+    # Held from here (after any menus, so an unattended prompt doesn't keep the
+    # screen on) to the end of the run, error or not.
+    if keep_awake(True):
+        logger.info("Holding the PC awake for this run (screen stays on; "
+                    "released when the run ends).")
+    try:
+        run(chosen, sandbox_arg, dd_scope, dd_rows,
+            profile_snapshot=profile_snapshot)
+    finally:
+        keep_awake(False)
 
 
 if __name__ == "__main__":
