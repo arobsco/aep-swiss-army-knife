@@ -806,3 +806,8 @@ python data_dictionary_v3.py "acme k" --sandbox=all
 python data_dictionary_v3.py "acme k" --sandbox=prod --data-dict="acme order event schema"
 python data_dictionary_v3.py "acme k" --sandbox=prod --data-dict=all --dd-rows=2000
 ```
+
+A full prod run takes the best part of an hour, so on Windows the script holds
+the PC awake (system and screen) until it finishes, and releases the hold
+however it ends (v3.4.11). Nothing in the power settings changes; closing the
+lid still sleeps.

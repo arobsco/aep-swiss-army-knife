@@ -7,6 +7,19 @@ can be traced to exactly what the code did at the time.
 
 ---
 
+## v3.4.11 — 2026-10-16
+
+**The run keeps the PC awake.** On 2026-10-16 the machine went into Modern
+Standby part-way through prod's run and froze it for 76 minutes (18:43 to
+20:01); nothing failed, it simply stopped. The dictionary now asks Windows to
+stay awake from the moment a credential is chosen until the run ends,
+however it ends. On a Modern Standby machine the screen turning off is what
+triggers standby, so the screen is held on too. The hold belongs to the
+process and goes when it exits, so the power settings are never changed.
+Closing the lid or pressing the power button still sleeps.
+
+---
+
 ## v3.4.10 — 2026-10-16
 
 **A hidden Dropped Field Index.** The dictionary is meant to be a census, so
