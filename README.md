@@ -650,11 +650,13 @@ verdict, so you can see exactly what was excluded and why:
 - **KEEP** — the schema is referenced by ≥ 1 dataset (the UI *DATASETS*
   column; computed by cross-referencing Catalog `/dataSets`) and survives every
   drop rule below.
-- **DROP: adhoc** — the canonical ad-hoc class, a per-schema *generated* class
-  (id tail is a long hex blob — Adobe Campaign / audience / import dumps, the
-  bulk of a tenant), or an auto-created title. This includes the hundreds of
+- **DROP: adhoc** — the schema extends the ad-hoc behaviour
+  (`xdm/data/adhoc`: Adobe Campaign / audience / import dumps, the bulk of a
+  tenant), or has an auto-created title. This includes the hundreds of
   `Schema for audience…` schemas, which are counted and reported on their own
-  line.
+  line. A custom class built in the UI also gets a hex id, but extends
+  *record* or *time-series* — those (the product, store and promotion
+  lookups) are **kept**.
 - **DROP: ajo** — Adobe Journey Optimizer-managed (`AO`/`AJO` title, or
   `meta:extends` in an AJO namespace).
 - **DROP: system** — Adobe-managed plumbing, not the customer's own model:

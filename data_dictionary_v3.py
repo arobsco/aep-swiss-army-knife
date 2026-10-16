@@ -34,8 +34,9 @@ Filtering (phase 1 -- transparent and reported, tune the constants below):
   KEEP   schema is referenced by >= 1 dataset (the UI "DATASETS" column).
   DROP   no-dataset   nothing ingests into it (ad-hoc audience schemas,
                       unused drafts) -- not interesting yet.
-  DROP   adhoc        meta:class is the ad-hoc class (auto-generated ingestion
-                      schemas).
+  DROP   adhoc        the schema extends the ad-hoc behaviour (auto-generated
+                      ingestion schemas). Custom classes built on record /
+                      time-series (product, store, promotion lookups) are KEPT.
   DROP   ajo          Adobe Journey Optimizer-managed schema (title / extends
                       heuristic) -- out of scope for now.
 
@@ -85,6 +86,13 @@ v3.2 -- Two things ship under this label:
     (coverage MISSING != 0%). The Profile Snapshot Export is sampled once per run:
     if its (huge) file manifest 504s under load, the failure is cached so the
     other Profile schemas fail fast instead of each re-hitting the dead snapshot.
+
+v3.4.8 -- Lookup schemas are back. Any class whose id ended in a long hex
+string was dropped as ad-hoc, but a custom class made in the UI gets the same
+kind of id -- so every lookup (Tesco Product Lookup, Marketplace Product,
+Store, Promotion, GTIN/TPNB, Recipes, Weather ...) went out with the ad-hoc
+dumps. The test is now the behaviour the schema extends: ad-hoc is dropped,
+record / time-series is kept.
 
 v3.4.6 -- Audience complexity score (beta). Not all audiences are created
 equal: one badly built audience can double the nightly batch run on its own,
@@ -214,8 +222,8 @@ from house_xlsx import Book
 # Constants
 # ----------------------------------------------------------------------------
 SCRIPT_NAME    = "data_dictionary_v3"
-SCRIPT_VERSION = "3.4.7"
-SCRIPT_DATE    = "2026-10-08"
+SCRIPT_VERSION = "3.4.8"
+SCRIPT_DATE    = "2026-10-16"
 SCRIPT_AUTHOR  = "Barry Mann (barrymann.com)"
 AUTHOR_SITE     = "https://barrymann.com"
 AUTHOR_LINKEDIN = "https://www.linkedin.com/in/barrymann/"
@@ -337,6 +345,10 @@ ADHOC_CLASS = "https://ns.adobe.com/xdm/data/adhoc"
 # generated class whose id tail is a long hex blob (Adobe Campaign / audience
 # / import dumps -- the bulk of a tenant), OR an auto-generated title.
 ADHOC_CLASS_HEX = re.compile(r"^[0-9a-fA-F]{24,}$")
+# Behaviours of a real (non-ad-hoc) custom class. A hex-tailed class whose
+# schema extends one of these is a customer lookup / custom class, so KEEP it.
+REAL_BEHAVIOURS = ("https://ns.adobe.com/xdm/data/record",
+                   "https://ns.adobe.com/xdm/data/time-series")
 ADHOC_TITLE_SUBSTRINGS = [
     "xdm schema for dataset",   # " XDM Schema for dataset xxx. Random identifier:"
 ]
@@ -1329,9 +1341,16 @@ def is_adhoc(raw: dict) -> bool:
     cls = raw.get("meta:class") or ""
     if cls == ADHOC_CLASS:
         return True
-    tail = cls.rstrip("/").rsplit("/", 1)[-1]
-    if ADHOC_CLASS_HEX.match(tail):       # generated per-schema class
+    # The behaviour the schema extends is the real test: a generated ad-hoc
+    # class extends xdm/data/adhoc. A custom class made in the UI (the product,
+    # store and promotion lookups) ALSO gets a hex id tail, but extends
+    # xdm/data/record or time-series -- that is the customer's own model.
+    extends = raw.get("meta:extends") or []
+    if ADHOC_CLASS in extends:
         return True
+    tail = cls.rstrip("/").rsplit("/", 1)[-1]
+    if ADHOC_CLASS_HEX.match(tail) and not any(b in extends for b in REAL_BEHAVIOURS):
+        return True                       # generated class, behaviour unknown
     title = (raw.get("title") or "").strip().lower()
     if any(title.startswith(p) for p in ADHOC_TITLE_PREFIXES):
         return True

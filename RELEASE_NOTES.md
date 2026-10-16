@@ -7,6 +7,23 @@ can be traced to exactly what the code did at the time.
 
 ---
 
+## v3.4.8 — 2026-10-16
+
+**Lookup schemas are back.** Every class whose id ended in a long hex string
+was dropped as ad-hoc. Generated ad-hoc classes look like that, but so does
+any custom class made in the UI, so every lookup schema went out with them:
+in prod, 20 schemas with datasets on 15 custom classes, among them **Tesco
+Product Lookup** (`tesco_product_lookup_dataset`, the product hierarchy
+behind `commercialHierarchyClassCode`), Marketplace Product, Baby Products,
+Store, Store Group, Store Manager, Promotion, GTIN/TPNB mapping, Recipes,
+Weather and Bank Suppression.
+
+The test is now the behaviour the schema extends: `xdm/data/adhoc` is
+dropped, `xdm/data/record` and `xdm/data/time-series` are kept. These tabs are
+green (the "other / lookup" hue) and sample coverage from their own datasets.
+
+---
+
 ## v3.4.7 — 2026-10-08
 
 **Overlap tabs.** The dataset overlap report is folded in from
