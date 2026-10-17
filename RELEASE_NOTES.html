@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="author" content="Barry Mann (barrymann.com)">
+<title>Data Dictionary Release Notes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: a release-notes document page -- sticky "On this page" rail on the
+   left at desktop width, one column on a phone. Colour lives in the labels and
+   alert boxes; the page itself stays a quiet reading surface. */
+:root {
+  --bg: #ffffff;
+  --surface: #f3f5f8;
+  --fg: #1c2330;
+  --muted: #5a6474;
+  --line: #d8dde4;
+  --link: #1a5bb5;
+  --new: #2d7d46;      --new-bg: #e5f3e9;
+  --updated: #1f5fa8;  --updated-bg: #e3edf9;
+  --fixed: #a85400;    --fixed-bg: #fbeedd;
+  --beta: #6e3fa3;     --beta-bg: #efe7f8;
+  --caution: #b3261e;  --caution-bg: #fbe7e5;
+  --font-body: "Source Sans 3", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Source Code Pro", Consolas, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161c; --surface: #1b2129; --fg: #e4e8ee; --muted: #9aa4b2;
+    --line: #2d3540; --link: #7fb2f0;
+    --new: #6fcf8a; --new-bg: #183424;
+    --updated: #7fb2f0; --updated-bg: #172a42;
+    --fixed: #f0a85a; --fixed-bg: #3a2610;
+    --beta: #c3a1ec; --beta-bg: #2c2040;
+    --caution: #f08a80; --caution-bg: #3d1b18;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161c; --surface: #1b2129; --fg: #e4e8ee; --muted: #9aa4b2;
+  --line: #2d3540; --link: #7fb2f0;
+  --new: #6fcf8a; --new-bg: #183424;
+  --updated: #7fb2f0; --updated-bg: #172a42;
+  --fixed: #f0a85a; --fixed-bg: #3a2610;
+  --beta: #c3a1ec; --beta-bg: #2c2040;
+  --caution: #f08a80; --caution-bg: #3d1b18;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.6 var(--font-body);
+}
+.page {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; grid-template-columns: 1fr; gap: 32px;
+}
+@media (min-width: 960px) {
+  .page { grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px);
+         align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+}
+.doc { min-width: 0; max-width: 860px; }
+.crumbs { font-size: 13px; color: var(--muted); letter-spacing: .02em; margin: 0 0 8px; }
+.crumbs span + span::before { content: "›"; margin: 0 8px; color: var(--line); }
+h1, h2, h3 { line-height: 1.25; text-wrap: balance; margin: 0; }
+h1 { font-size: 34px; font-weight: 700; margin-bottom: 12px; }
+h2 { font-size: 26px; font-weight: 700; padding-top: 8px; margin: 8px 0 12px; scroll-margin-top: 24px; }
+h3 { font-size: 20px; font-weight: 600; margin: 32px 0 8px; scroll-margin-top: 24px; }
+p { margin: 0 0 14px; }
+a { color: var(--link); text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 2px; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 40px 0 28px; }
+ul { margin: 0 0 16px; padding-left: 22px; }
+li { margin: 4px 0; }
+code {
+  font: 0.86em/1.4 var(--font-mono); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
+  overflow-wrap: anywhere;
+}
+.table-wrap { overflow-x: auto; margin: 8px 0 20px; border: 1px solid var(--line); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+th { background: var(--surface); font-weight: 600; font-size: 13px; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); }
+tbody tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; width: 30%; min-width: 180px; }
+td:first-child code { font-weight: 400; color: var(--muted); }
+.badge {
+  display: inline-block; font-size: 11px; font-weight: 700; line-height: 1;
+  letter-spacing: .05em; text-transform: uppercase; padding: 4px 7px 3px;
+  border-radius: 999px; vertical-align: 2px; margin: 0 2px; white-space: nowrap;
+}
+.badge-new { color: var(--new); background: var(--new-bg); }
+.badge-updated { color: var(--updated); background: var(--updated-bg); }
+.badge-fixed { color: var(--fixed); background: var(--fixed-bg); }
+.badge-beta { color: var(--beta); background: var(--beta-bg); }
+.alert { border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; margin: 8px 0 20px; }
+.alert p:last-child { margin-bottom: 0; }
+.alert-label { font-weight: 700; font-size: 13px; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 4px; }
+.alert-tip { background: var(--new-bg); border-color: var(--new); }
+.alert-tip .alert-label { color: var(--new); }
+.alert-note { background: var(--updated-bg); border-color: var(--updated); }
+.alert-note .alert-label { color: var(--updated); }
+.alert-important { background: var(--beta-bg); border-color: var(--beta); }
+.alert-important .alert-label { color: var(--beta); }
+.alert-warning { background: var(--fixed-bg); border-color: var(--fixed); }
+.alert-warning .alert-label { color: var(--fixed); }
+.alert-caution { background: var(--caution-bg); border-color: var(--caution); }
+.alert-caution .alert-label { color: var(--caution); }
+.toc-title { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.toc ol { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--line); }
+.toc li { margin: 0; }
+.toc a { display: block; padding: 5px 0 5px 14px; color: var(--fg); text-decoration: none; font-size: 15px; }
+.toc a:hover { color: var(--link); }
+@media (max-width: 959px) {
+  .toc ol { display: flex; flex-wrap: wrap; gap: 4px 16px; border-left: 0; }
+  .toc a { padding: 2px 0; }
+}
+.foot { color: var(--muted); font-size: 13px; margin-top: 40px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+</head>
+<body>
+<div class="page"><nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ol><li><a href="#october-16-2026">October 16, 2026</a></li><li><a href="#october-8-2026">October 8, 2026</a></li><li><a href="#october-6-2026">October 6, 2026</a></li><li><a href="#september-30-2026">September 30, 2026</a></li><li><a href="#september-29-2026">September 29, 2026</a></li><li><a href="#september-25-2026">September 25, 2026</a></li><li><a href="#september-21-2026">September 21, 2026</a></li><li><a href="#august-14-2026">August 14, 2026</a></li><li><a href="#august-13-2026">August 13, 2026</a></li><li><a href="#earlier-releases">Earlier releases</a></li></ol></nav><main class="doc"><p class="crumbs"><span>AEP Swiss Army Knife</span><span>Data Dictionary</span><span>Release notes</span></p>
+<h1 id="data-dictionary-release-notes">Data Dictionary release notes</h1>
+<p><strong>Last update:</strong> October 16, 2026 · <strong>Latest version:</strong> v3.4.11 · <strong>Script:</strong> <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/data_dictionary_v3.py"><code>data_dictionary_v3.py</code></a></p>
+<div class="alert alert-tip"><p class="alert-label">Tip</p><p>Every workbook the Data Dictionary writes carries its version, the commit that produced it and a link back to this page, so a dictionary found months later can be traced to exactly what the code did at the time. The notes come in two editions: this Markdown file, and a colour HTML edition, <code>RELEASE_NOTES.html</code>, built from it by <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/release_notes_html.py"><code>release_notes_html.py</code></a>. How to run the tool: the <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/README.md">README</a>.</p></div>
+<p><strong>Labels:</strong> <span class="badge badge-new">New</span> a new capability · <span class="badge badge-updated">Updated</span> a change to something that already existed · <span class="badge badge-fixed">Fixed</span> a bug fix · <span class="badge badge-beta">Beta</span> works, but still being tuned</p>
+<div class="table-wrap"><table><thead><tr><th>Release date</th><th>Version</th><th>Highlights</th></tr></thead><tbody><tr><td><a href="#october-16-2026">October 16, 2026</a></td><td>v3.4.8 – v3.4.11</td><td>Lookup schemas kept; Dropped Schemas and Dropped Field Index tabs; the run keeps the PC awake</td></tr><tr><td><a href="#october-8-2026">October 8, 2026</a></td><td>v3.4.7</td><td>Overlap tabs; one workbook per tool</td></tr><tr><td><a href="#october-6-2026">October 6, 2026</a></td><td>v3.4.6</td><td>Audience complexity score (beta)</td></tr><tr><td><a href="#september-30-2026">September 30, 2026</a></td><td>v3.4.5</td><td>No more silent PQL truncation; the dictionary's own folder</td></tr><tr><td><a href="#september-29-2026">September 29, 2026</a></td><td>v3.4.4</td><td>Snapshot tabs</td></tr><tr><td><a href="#september-25-2026">September 25, 2026</a></td><td>v3.4.3</td><td>Friendly names and descriptions everywhere; "Dual labels" renamed</td></tr><tr><td><a href="#september-21-2026">September 21, 2026</a></td><td>v3.4.2</td><td>Tab colour system; data-hygiene columns</td></tr><tr><td><a href="#august-14-2026">August 14, 2026</a></td><td>v3.4.0 – v3.4.1</td><td>Complete Profile coverage; credential name gone from the workbook</td></tr><tr><td><a href="#august-13-2026">August 13, 2026</a></td><td>v3.3.0</td><td>Audiences tab; provenance line; How to Use tab</td></tr><tr><td><a href="#earlier-releases">Earlier releases</a></td><td>v3.0.0 – v3.2.0</td><td>The baseline; Profile coverage; SQL table names</td></tr></tbody></table></div>
+<hr>
+<h2 id="october-16-2026">October 16, 2026</h2>
+<p><strong>Release date: October 16, 2026</strong> · v3.4.8 – v3.4.11</p>
+<p>New features and updates to existing features in the Data Dictionary:</p>
+<ul><li><strong>Schema filtering:</strong> custom lookup schemas get their tabs back.</li><li><strong>Workbook:</strong> two hidden tabs that account for everything the filters leave out.</li><li><strong>Running the dictionary:</strong> a long run can no longer be frozen by the PC going to sleep.</li><li><strong>Known issues.</strong></li></ul>
+<h3 id="schema-filtering">Schema filtering</h3>
+<p>The filters decide which of a sandbox's schemas get a tab. In prod they take 2,830 schemas down to 64.</p>
+<p><strong>Fixes and improvements</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Fix</th><th>Description</th></tr></thead><tbody><tr><td>Lookup schemas are kept <span class="badge badge-fixed">Fixed</span><br><code>v3.4.8</code></td><td>Every class whose id ended in a long hex string was dropped as ad-hoc. Generated ad-hoc classes look like that, but so does any custom class made in the UI, so every lookup schema went out with them. In prod that was 20 schemas with datasets on 15 custom classes, among them <strong>Tesco Product Lookup</strong> (<code>tesco_product_lookup_dataset</code>, the product hierarchy behind <code>commercialHierarchyClassCode</code>), Marketplace Product, Baby Products, Store, Store Group, Store Manager, Promotion, GTIN/TPNB mapping, Recipes, Weather and Bank Suppression. The test is now the behaviour the schema extends: <code>xdm/data/adhoc</code> is dropped, <code>xdm/data/record</code> and <code>xdm/data/time-series</code> are kept. The restored tabs are green (the "other / lookup" hue) and sample coverage from their own datasets.</td></tr></tbody></table></div>
+<h3 id="workbook">Workbook</h3>
+<p>The schemas the filters drop are now accounted for in the workbook itself, on two hidden tabs (right-click any tab › <strong>Unhide</strong>). v3.4.8's bug went unseen because a dropped schema left no trace: its reason was printed to the console and then gone.</p>
+<p><strong>New features</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Feature</th><th>Description</th></tr></thead><tbody><tr><td>Dropped Schemas tab <span class="badge badge-new">New</span><br><code>v3.4.9</code></td><td>Every schema the filters leave out, with the drop reason in plain English, how many datasets use it, their SQL table names, its class and behaviour (ad-hoc / record / time-series). Schemas that still hold data come first, so a table you query that has no tab is easy to find, along with the reason it was dropped. The Summary and How to Use tabs point to it.</td></tr><tr><td>Dropped Field Index tab <span class="badge badge-new">New</span><br><code>v3.4.10</code></td><td>The dictionary is meant to be a census, so the dropped schemas are inventoried too: every field of every dropped schema, with its dot-notation path, type and display name, the schema, why it was dropped, its dataset count and SQL table names. An inventory only, with no coverage or sample values. The Field Index header points to it for a field that isn't there, and the Dropped Schemas tab gains a <strong>Fields</strong> count per schema ("could not be read" where the fetch failed). In prod: about 244,000 rows, from about 2,800 extra schema fetches at ~0.13 s each, which adds five or six minutes.</td></tr></tbody></table></div>
+<h3 id="running-the-dictionary">Running the dictionary</h3>
+<p><strong>Fixes and improvements</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Fix</th><th>Description</th></tr></thead><tbody><tr><td>The run keeps the PC awake <span class="badge badge-updated">Updated</span><br><code>v3.4.11</code></td><td>On October 16 the machine went into Modern Standby part-way through prod's run and froze it for 76 minutes (18:43 to 20:01). Nothing failed; it simply stopped. The dictionary now asks Windows to stay awake from the moment a credential is chosen until the run ends, however it ends. On a Modern Standby machine the screen turning off is what triggers standby, so the screen is held on too. The hold belongs to the process and goes when it exits, so the power settings are never changed. Closing the lid or pressing the power button still sleeps.</td></tr></tbody></table></div>
+<h3 id="known-issues">Known issues</h3>
+<div class="table-wrap"><table><thead><tr><th>Issue</th><th>Description</th></tr></thead><tbody><tr><td>Creator columns show raw ids</td><td>The credential the dictionary runs with has lost access to the User Management API, so the user directory read fails and <em>Created by</em> / <em>Last modified by</em> on the Audiences tab show ids instead of names.</td></tr><tr><td>Some coverage can't be read</td><td>Data Access file listings sometimes time out under load. A schema whose data exists but couldn't be read is marked "not confirmed empty" in the DATA COMPLETENESS block, never 0%. On October 16 this hit the Tesco Bank Suppression Lookup Schema.</td></tr><tr><td>Complexity weights are uncalibrated</td><td>The audience complexity score is beta: its weights are judgement, not measurement, because AEP never reports what an audience cost to compute.</td></tr></tbody></table></div>
+<p>For more information, read the <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/README.md">README</a>.</p>
+<hr>
+<h2 id="october-8-2026">October 8, 2026</h2>
+<p><strong>Release date: October 8, 2026</strong> · v3.4.7</p>
+<p>New features and updates to existing features in the Data Dictionary:</p>
+<ul><li><strong>Workbook:</strong> the dataset overlap report, as two tabs.</li><li><strong>All tools:</strong> one workbook per tool, and nothing else.</li></ul>
+<h3 id="workbook-1">Workbook</h3>
+<p>The dataset overlap report is folded in from <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/overlap_report.py"><code>overlap_report.py</code></a>, which stays runnable on its own.</p>
+<p><strong>New features</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Feature</th><th>Description</th></tr></thead><tbody><tr><td>Overlap cut-list <span class="badge badge-new">New</span></td><td>The profiles ONLY one dataset contributes (expire it, save exactly that many), with a running total against the Addressable Audience licence and the point where an overage would clear.</td></tr><tr><td>Overlap full report <span class="badge badge-new">New</span></td><td>Every combination of datasets a profile is built from, largest first. A sudden new combination is a new route in: this is how the 3.1M shell profiles of October 5–6 showed up, as "Tesco Profile Dataset only".</td></tr></tbody></table></div>
+<h3 id="all-tools">All tools</h3>
+<p><strong>Fixes and improvements</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Fix</th><th>Description</th></tr></thead><tbody><tr><td>One workbook per tool <span class="badge badge-updated">Updated</span></td><td>House rule applied across the library: every tool writes <strong>one workbook with a stable name, overwritten each run</strong>, and nothing else. The CSV and JSON side-files are gone from <code>overlap_report</code>, <code>batch_eval_timing</code>, <code>failed_batch_report</code>, <code>dataset_census</code>, <code>sluggishness_detector</code>, <code>audit_batch_schedules_v2</code>, <code>dd_audience_countdown</code>, <code>audit_hunt</code>, <code>profile_jump</code> and <code>guardrail_audit</code>. The shared writer is <code>house_xlsx.py</code>.</td></tr></tbody></table></div>
+<p>For more information, read the <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/README.md">README</a>.</p>
+<hr>
+<h2 id="october-6-2026">October 6, 2026</h2>
+<p><strong>Release date: October 6, 2026</strong> · v3.4.6</p>
+<p>New features and updates to existing features in the Data Dictionary:</p>
+<ul><li><strong>Audiences:</strong> a complexity score for every rule-based audience.</li></ul>
+<h3 id="audiences">Audiences</h3>
+<p>Not all audiences are created equal: one badly built audience can double the nightly batch run on its own, and AEP's own metrics never say what an audience cost to compute.</p>
+<p><strong>New features</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Feature</th><th>Description</th></tr></thead><tbody><tr><td>Audience complexity score <span class="badge badge-new">New</span> <span class="badge badge-beta">Beta</span></td><td>The Audiences tab gains a <strong>Complexity score (0-100)</strong> and a <strong>RED / AMBER / GREEN</strong> on it, plus the reasons: <em>Why this score</em> (the points, in plain English), event scan, lookback days, lookup joins, joined fields, aggregations, depends-on count, largest base audience and its size, sequence steps, conditions, longest hard-coded value list, merge policies, and how many audiences use it. The run log reports the RED / AMBER / GREEN counts per sandbox. The How to Use tab explains the score and the usual fix: shorten the lookback, or move the sum / count upstream into a computed attribute.</td></tr></tbody></table></div>
+<p><strong>How the score is built</strong></p>
+<p>The rules follow the two miaprova.com write-ups on expensive AEP segments (<em>Why your most expensive AEP audience might be your newest one</em>; <em>The right fix for expensive AEP segments: move the math upstream</em>). Each cost driver is read off the PQL and the audience record.</p>
+<div class="table-wrap"><table><thead><tr><th>Cost driver</th><th>Points</th></tr></thead><tbody><tr><td>Event scan and lookback</td><td>The longer the window, the more events are read per profile per night. A scan with <em>no</em> time limit scores highest (35).</td></tr><tr><td>Lookup joins</td><td>A join to another class (products via gtin) runs per event per profile: 18, +4 per extra field, capped at 25.</td></tr><tr><td>Aggregations that cannot short-circuit</td><td>sum / average 15, count 10, "occurs N times" 6, forall 4, capped at 20.</td></tr><tr><td>Base audience size</td><td><code>inSegment()</code> on a big audience scans all of it: +2 per dependency, +3 / +6 / +9 for a base of 1M / 5M / 20M profiles.</td></tr><tr><td>Smaller signals</td><td>Sequences, condition count, lists of 100+ values, more than one merge policy, a negated event step and an overridden performance warning.</td></tr></tbody></table></div>
+<p>RED is 55 and over, AMBER 30 to 54. The weights live in <code>audience_complexity.py</code> (developed standalone, folded in) and are a first cut to be argued with. The size of each base audience is read from <code>/segment/definitions/&lt;id&gt;</code> once per run (a few hundred small reads).</p>
+<div class="alert alert-note"><p class="alert-label">Note</p><p>First prod run: 2,205 rule-based audiences scored: 64 RED, 482 AMBER, 1,659 GREEN. Every RED is the same shape: an unlimited event scan, a product lookup join, and a base audience of 13 to 23 million profiles.</p></div>
+<p>For more information, read the <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/README.md">README</a>.</p>
+<hr>
+<h2 id="september-30-2026">September 30, 2026</h2>
+<p><strong>Release date: September 30, 2026</strong> · v3.4.5</p>
+<p>New features and updates to existing features in the Data Dictionary:</p>
+<ul><li><strong>Audiences:</strong> no more silent PQL truncation.</li><li><strong>Output:</strong> the dictionary gets its own folder.</li></ul>
+<h3 id="audiences-1">Audiences</h3>
+<p>Excel caps a cell at 32,767 characters, and the Audiences tab used to cut a rule at 32,000 without saying so. Eleven published batch audiences (store-list rules, mostly) were incomplete in the August 21 run.</p>
+<p><strong>Fixes and improvements</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Fix</th><th>Description</th></tr></thead><tbody><tr><td>Full-PQL sidecar file <span class="badge badge-new">New</span></td><td>The full, untruncated rule of every audience is written to <code>output/data_dictionary/pql/audiences_pql_&lt;sandbox&gt;_&lt;yyyymmdd&gt;.jsonl</code>: one JSON line per audience with <code>audience_id</code>, <code>audience_name</code>, <code>format</code>, <code>raw_pql</code> and <code>readable_pql</code>. Old sidecars are archived with the old dictionary.</td></tr><tr><td>Three new Audiences columns <span class="badge badge-new">New</span></td><td>After <em>PQL (raw pql/json)</em>: <strong>PQL length</strong>, <strong>PQL truncated in sheet</strong> (yes/no, red when yes) and <strong>PQL format</strong> (<code>json</code> for Adobe's syntax tree, <code>pql-text</code> for a rule held as PQL text, which is complete but not JSON). <em>Unresolved tag ids</em> and <em>System tags</em> move three columns right.</td></tr><tr><td>Truncation is marked <span class="badge badge-fixed">Fixed</span></td><td>A cut cell now ends with <code>…[TRUNCATED – see sidecar]</code>.</td></tr><tr><td>Run log summary <span class="badge badge-updated">Updated</span></td><td>The run log closes with a per-sandbox line: audiences, how many were cut, count by format, and the sidecar path. The How to Use tab explains it.</td></tr></tbody></table></div>
+<h3 id="output">Output</h3>
+<p><strong>Fixes and improvements</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Fix</th><th>Description</th></tr></thead><tbody><tr><td>The dictionary's own folder <span class="badge badge-updated">Updated</span></td><td>The dictionary now writes to <code>output/data_dictionary/</code> (with its <code>archive/</code> beneath it) instead of the shared <code>output/</code> folder.</td></tr></tbody></table></div>
+<p>For more information, read the <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/README.md">README</a>.</p>
+<hr>
+<h2 id="september-29-2026">September 29, 2026</h2>
+<p><strong>Release date: September 29, 2026</strong> · v3.4.4</p>
+<p>New features and updates to existing features in the Data Dictionary:</p>
+<ul><li><strong>Workbook:</strong> snapshot tabs, the first standalone tool folded in.</li></ul>
+<h3 id="workbook-2">Workbook</h3>
+<p>The first standalone tool to be folded into the dictionary: <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/snapshot_tables.py"><code>snapshot_tables.py</code></a>. The dictionary calls the tool's own collector and tab writer rather than copying them, so the standalone script produces identical tabs and there is one copy of the logic. This is the pattern for folding in further tools.</p>
+<p><strong>New features</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Feature</th><th>Description</th></tr></thead><tbody><tr><td>Snapshot Summary <span class="badge badge-new">New</span></td><td>One row per sandbox: the correct snapshot tables, when the system evaluation is scheduled, when it last actually ran, when the snapshot was written and how long that took. <strong>Time to run</strong> is tagged RED / AMBER / GREEN (under 60 min, 60 to 180 min, 180 min or more). Production sandboxes come first, development / PPE at the bottom. All times are UTC.</td></tr><tr><td>Snapshot Tables <span class="badge badge-new">New</span></td><td>One row per snapshot export table, with its Query Service table name and merge policy. Rows on the sandbox's <strong>default merge policy</strong> are green: those are the correct tables. The rest sit on other merge policies (added for debugging etc.) or carry none.</td></tr><tr><td>Workbook author <span class="badge badge-updated">Updated</span></td><td>The workbook's author property is now <em>Barry Mann (barrymann.com)</em> rather than the library's name.</td></tr></tbody></table></div>
+<p>For more information, read the <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/README.md">README</a>.</p>
+<hr>
+<h2 id="september-25-2026">September 25, 2026</h2>
+<p><strong>Release date: September 25, 2026</strong> · v3.4.3</p>
+<p>New features and updates to existing features in the Data Dictionary:</p>
+<ul><li><strong>Workbook:</strong> friendly names and descriptions next to every technical name; "Dual labels" renamed.</li></ul>
+<h3 id="workbook-3">Workbook</h3>
+<p><strong>New features</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Feature</th><th>Description</th></tr></thead><tbody><tr><td>Friendly Path and Description on every field <span class="badge badge-new">New</span></td><td>On every schema tab and the Field Index. Friendly Path is the display names from the root down, e.g. <em>Person &gt; Full name &gt; First name</em> for <code>person.name.firstName</code>, with a level's key standing in where no title is set. Both come from the schema itself; where a field carries no description of its own, its <code>alternateDisplayInfo</code> description is used.</td></tr><tr><td>Descriptions for schemas, datasets and audiences <span class="badge badge-new">New</span></td><td>A Description column on the Schemas tab, and each schema's description under the title on its own tab (the field header row moves from row 6 to row 7). A Description column on the Datasets tab (Catalog's <code>description</code>) and on the Audiences tab, next to the audience name. A blank description means Adobe holds none for that object, not that it was dropped.</td></tr></tbody></table></div>
+<p><strong>Fixes and improvements</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Fix</th><th>Description</th></tr></thead><tbody><tr><td>"Dual labels" is gone <span class="badge badge-fixed">Fixed</span></td><td>The count of fields carrying an <code>alternateDisplayInfo</code> friendly display name was headed <em>Dual labels</em> (Summary) and <em>Dual-labelled fields</em> (Schemas). That reads as a misspelling of <strong>DULE</strong> (Data Usage Labeling and Enforcement, Adobe's governance framework that controls access to objects and data through labels such as C8 and C12), which is an entirely different thing. The columns are now <strong>Friendly labels</strong> and <strong>Friendly-labelled fields</strong>, and the run log says <em>Friendly-name labels</em>. The How to Use tab gains a "Friendly labels are not DULE labels" row explaining what DULE is and that DULE labels are not in the workbook yet (still planned as a per-field column).</td></tr><tr><td>Tab names keep their first letter <span class="badge badge-fixed">Fixed</span></td><td>A schema titled "Acme …" lost the first letter of its tab name: the prefix strip took one character too many.</td></tr></tbody></table></div>
+<p>For more information, read the <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/README.md">README</a>.</p>
+<hr>
+<h2 id="september-21-2026">September 21, 2026</h2>
+<p><strong>Release date: September 21, 2026</strong> · v3.4.2</p>
+<p>New features and updates to existing features in the Data Dictionary:</p>
+<ul><li><strong>Workbook:</strong> a tab colour system that means something; data-hygiene columns.</li><li><strong>Coverage sampling:</strong> honest completeness statuses.</li></ul>
+<h3 id="workbook-4">Workbook</h3>
+<p>Purple used to mean only "built on the XDM Individual Profile class". A Profile-class schema whose datasets were all disabled for Unified Profile was still purple (five tabs in a prod run: raw feeds, backups, pattern experiments) and, worse, its coverage was sampled from the Profile Snapshot Export, where its rows never land, so it read as empty.</p>
+<p><strong>New features</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Feature</th><th>Description</th></tr></thead><tbody><tr><td>Tab colour system <span class="badge badge-updated">Updated</span></td><td>Every schema tab is coloured on two axes: the hue is the class, the shade is whether the data reaches Unified Profile (see the table below). "In Profile" is read from each dataset's <code>tags.unifiedProfile</code>, the same signal the Datasets tab's Profile column shows. Only <strong>dark purple</strong> schemas are in the merged union and sample coverage from the Profile Snapshot Export; every other schema samples its own datasets (the tab header's <code>source:</code> note says which). A six-swatch colour key at the top of the Summary tab explains the system.</td></tr><tr><td>Data-hygiene columns <span class="badge badge-new">New</span></td><td>On the Schemas and Datasets tabs, straight from Catalog's <code>extensions</code>: <strong>Kind</strong> (Profile / Event / Custom) and, on Schemas, <strong>In Profile</strong> (Y/N); <strong>Data lake GB</strong> and <strong>Data lake rows</strong> (<code>adobe_lakeHouse.metrics</code>); <strong>Data lake TTL (days)</strong> (<code>adobe_lakeHouse.rowExpiration.ttlValue</code>); <strong>Profile GB</strong> and <strong>Profile TTL (days)</strong> (<code>adobe_unifiedProfile.metrics</code> / <code>rowExpiration</code>). TTLs are in days (months = 30, years = 365) so they sort; blank means no expiration is set. Schemas roll their datasets up: sizes sum, TTL is the longest. Reverse-sort by GB or TTL and filter by Kind straight from the header row.</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Class</th><th>In Profile (≥1 dataset enabled)</th><th>Not in Profile</th></tr></thead><tbody><tr><td>XDM Individual Profile</td><td>dark purple</td><td>light purple</td></tr><tr><td>XDM ExperienceEvent</td><td>dark blue</td><td>light blue</td></tr><tr><td>Other / lookup</td><td>dark green</td><td>light green</td></tr></tbody></table></div>
+<h3 id="coverage-sampling">Coverage sampling</h3>
+<p><strong>Fixes and improvements</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Fix</th><th>Description</th></tr></thead><tbody><tr><td>No false PARTIAL <span class="badge badge-fixed">Fixed</span></td><td>A partition that parses to 0 rows no longer marks a schema PARTIAL ("0 batch(es) failed to read"). Only real read failures do.</td></tr><tr><td>MISSING says why <span class="badge badge-fixed">Fixed</span></td><td>MISSING no longer blames "504/timeout" unconditionally. The same status is produced by a 403 when the credential is denied a dataset's labelled fields, and the text now says so.</td></tr><tr><td>Full batch ids in the log <span class="badge badge-fixed">Fixed</span></td><td>The run log prints full batch ids. They were cut to 24 of 26 characters, so they could not be pasted into the API.</td></tr></tbody></table></div>
+<p>For more information, read the <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/README.md">README</a>.</p>
+<hr>
+<h2 id="august-14-2026">August 14, 2026</h2>
+<p><strong>Release date: August 14, 2026</strong> · v3.4.0 – v3.4.1</p>
+<p>New features and updates to existing features in the Data Dictionary:</p>
+<ul><li><strong>Coverage sampling:</strong> complete coverage on Profile schemas.</li><li><strong>Workbook:</strong> the credential name is gone from the workbook; release notes are linked from it.</li></ul>
+<h3 id="coverage-sampling-1">Coverage sampling</h3>
+<p>A prod run came back with 16 of 33 schema tabs flagged <code>MISSING</code>. All 16 were Profile-class, and all 16 failed for one reason: a single gateway 504. Every Profile-class schema samples the <em>same</em> Profile Snapshot Export union, but each one re-downloaded the ~127 MB partition for itself: sixteen downloads of identical data, and sixteen chances to hit a 504. The <code>snap_unreadable</code> cache added in v3.2 refused to retry a snapshot that had already failed, so <strong>the first failure became MISSING coverage for every Profile schema behind it</strong>.</p>
+<p><strong>Fixes and improvements</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Fix</th><th>Description</th></tr></thead><tbody><tr><td>One snapshot download per sandbox <span class="badge badge-fixed">Fixed</span><br><code>v3.4.1</code></td><td>The snapshot is sampled <strong>once per sandbox</strong> and the rows reused in memory for every Profile-class schema. One download, not sixteen. In the log, Profile schemas after the first say <code>reusing the snapshot sample already downloaded this run (N rows, no re-download)</code>.</td></tr><tr><td>Retry pass <span class="badge badge-new">New</span><br><code>v3.4.1</code></td><td>At the end of sampling, any schema still <code>UNREADABLE</code> is tried once more before the workbook is written, with the snapshot cache cleared so the union gets a genuine second attempt. It costs nothing when the first pass was clean, and announces itself in the log as <code>RETRY PASS</code>.</td></tr><tr><td>Sampling errors are classified <span class="badge badge-fixed">Fixed</span><br><code>v3.4.1</code></td><td>A sampling <strong>exception</strong> is now <code>unreadable</code> rather than falling through unlabelled, so it lands in the DATA COMPLETENESS block instead of reading as "not sampled".</td></tr></tbody></table></div>
+<h3 id="workbook-5">Workbook</h3>
+<p>Titles inside the file used to fall back to the credential's <em>service name</em>, the key under which a credential is filed in the OS vault. A workbook read with a key stored as <code>&lt;name&gt;</code> was headed "Data Dictionary — <code>&lt;Name&gt;</code>", putting an artefact of our own key management exactly where the reader expects the subject of the report. It also implied the wrong thing: the credential says who <em>read</em> the sandbox, not what the document is <em>about</em>.</p>
+<p><strong>Fixes and improvements</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Fix</th><th>Description</th></tr></thead><tbody><tr><td>The credential name is gone <span class="badge badge-fixed">Fixed</span><br><code>v3.4.0</code></td><td>Workbook titles use a client name <strong>only</strong> when the credential record carries an explicit <code>client</code> key. With no client configured, every title identifies the workbook by <strong>sandbox</strong>, the same thing the filename has said since v3.3: a prod run is headed "Data Dictionary v3.4.0 — prod". This applies to all four titled tabs: Summary, Field Index, Datasets, Audiences. The console banner still names the credential set, which is operationally useful and never leaves your machine.</td></tr><tr><td>Release notes are linked <span class="badge badge-new">New</span><br><code>v3.4.0</code></td><td>The provenance line on every tab ends with a link to this page, and the How to Use tab gains a clickable <strong>"What's new in v3.4.0"</strong> link.</td></tr></tbody></table></div>
+<div class="alert alert-important"><p class="alert-label">Important</p><p>To show a real client name in the titles, add a <code>client</code> key to that credential record. Otherwise you get the sandbox, which is usually what you wanted anyway.</p></div>
+<p>For more information, read the <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/README.md">README</a>.</p>
+<hr>
+<h2 id="august-13-2026">August 13, 2026</h2>
+<p><strong>Release date: August 13, 2026</strong> · v3.3.0</p>
+<p>New features and updates to existing features in the Data Dictionary:</p>
+<ul><li><strong>Workbook:</strong> readability, provenance, and the first half of the credential-name fix.</li></ul>
+<h3 id="workbook-6">Workbook</h3>
+<p><strong>New features</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Feature</th><th>Description</th></tr></thead><tbody><tr><td>Audiences tab <span class="badge badge-new">New</span></td><td>Every audience with its tags, who built it, who last changed it, and the segmentation rule (PQL) rendered readable. Rules containing event-sequence or time-window clauses are marked <code>partial</code> and show <code>&lt;...&gt;</code> rather than pretending to be complete; the raw definition is kept alongside.</td></tr><tr><td>Provenance line on every tab <span class="badge badge-new">New</span></td><td>When the run happened, which script version, which commit last touched the script, and a loud red warning when the working tree had uncommitted changes (in which case the commit id does <em>not</em> describe the code that produced the file).</td></tr><tr><td>How to Use tab <span class="badge badge-new">New</span></td><td>Placed second, so it sits beside the Summary rather than behind thirty schema tabs. Written for someone who has never seen the workbook before, including the traps: coverage is a <em>sample</em>, and <code>MISSING</code> is not the same as <code>0%</code>.</td></tr><tr><td>Filters and frozen headers <span class="badge badge-new">New</span></td><td>On every tab.</td></tr></tbody></table></div>
+<p><strong>Fixes and improvements</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Fix</th><th>Description</th></tr></thead><tbody><tr><td>Credential name dropped from the filename <span class="badge badge-fixed">Fixed</span></td><td>In favour of the sandbox: <code>Data Dictionary - prod - 2026-08-14.xlsx</code>. v3.4 finished the job inside the file.</td></tr><tr><td>Org-level reads once per run <span class="badge badge-updated">Updated</span></td><td>The tag vocabulary and user directory are fetched <strong>once per org</strong> rather than per sandbox.</td></tr></tbody></table></div>
+<p>For more information, read the <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/README.md">README</a>.</p>
+<hr>
+<h2 id="earlier-releases">Earlier releases</h2>
+<p><strong>Release date: not recorded</strong> · v3.0.0 – v3.2.0</p>
+<h3 id="v320">v3.2.0</h3>
+<p>SQL table names, Profile flags, and honest gaps.</p>
+<div class="table-wrap"><table><thead><tr><th>Feature</th><th>Description</th></tr></thead><tbody><tr><td>Datasets tab <span class="badge badge-new">New</span></td><td>Maps every dataset's friendly name → <strong>Query Service table name</strong> (<code>tags['adobe/pqs/table']</code>) → schema. The system name is what you <code>SELECT ... FROM</code>, and it differs from the friendly name; without it the workbook could not be used to write SQL. <em>Table name(s)</em> columns on the Schemas index and Field Index, and the SQL table name in each schema tab's header block.</td></tr><tr><td>Profile column <span class="badge badge-new">New</span></td><td>On the Datasets tab (<code>tags.unifiedProfile</code>), flagging both Profile-enabled datasets and the Profile Snapshot Export(s), so you know which tables hold whole profiles. Profile rows sort to the top.</td></tr><tr><td>Data-completeness warnings <span class="badge badge-new">New</span></td><td>So a partial dictionary is never read as gospel: any schema whose coverage is missing, partial or empty is listed in a Summary <strong>DATA COMPLETENESS</strong> block and banner-flagged on its own tab. <code>MISSING</code> is deliberately distinguished from <code>0%</code>.</td></tr><tr><td>Snapshot sampled once per run <span class="badge badge-updated">Updated</span></td><td>If the Profile Snapshot Export's (huge) file manifest times out under load, the failure is cached so the remaining Profile schemas fail fast instead of each re-hitting a dead snapshot.</td></tr><tr><td>Luma demo dataset <span class="badge badge-new">New</span></td><td><code>demo/luma/</code>: Adobe's public sample data, organised and tenant-normalised for offline demos and tests.</td></tr></tbody></table></div>
+<h3 id="v310">v3.1.0</h3>
+<p>Profile coverage fix. A Profile-class schema is the post-merge <strong>union</strong> (identity-deduped, last-write-wins), so sampling its <em>feeding</em> datasets tallies pre-merge fragments and reads falsely sparse. Every Profile schema was under-reporting coverage.</p>
+<div class="table-wrap"><table><thead><tr><th>Fix</th><th>Description</th></tr></thead><tbody><tr><td>Profile schemas sample the snapshot <span class="badge badge-fixed">Fixed</span></td><td>Profile-class schemas are sampled from the <strong>Profile Snapshot Export</strong> dataset belonging to the <strong>default merge policy</strong>, resolved automatically: default merge policy → the snapshot dataset tagged with that policy id whose <code>schemaRef</code> is <code>profile__union</code>.</td></tr><tr><td>Smallest partition first <span class="badge badge-updated">Updated</span></td><td>Snapshots are enormous, so the tool downloads the <strong>smallest non-empty partition file</strong> rather than whichever comes first.</td></tr><tr><td><code>--profile-snapshot</code> override <span class="badge badge-new">New</span></td><td><code>--profile-snapshot=&lt;datasetId&gt;</code> for when the default isn't the one you want.</td></tr></tbody></table></div>
+<h3 id="v300">v3.0.0</h3>
+<p>The baseline: every tenant XDM schema pulled from an AEP sandbox, filtered down to the ones that matter, and written to a tabbed, strictly-confidential Excel workbook.</p>
+<div class="table-wrap"><table><thead><tr><th>Feature</th><th>Description</th></tr></thead><tbody><tr><td>Auditable filtering <span class="badge badge-new">New</span></td><td>A printed <strong>KEEP / DROP verdict per schema</strong>, so exclusions are auditable rather than silent: <code>no-dataset</code>, <code>adhoc</code>, <code>ajo</code>, <code>system</code>, <code>test</code>. On a large tenant this is the difference between 2,400 schemas and the ~30 that are real.</td></tr><tr><td>One tab per schema <span class="badge badge-new">New</span></td><td>The full field list in dot notation with data types, identities, relationships and friendly (<code>alternateDisplayInfo</code>) labels, ready to paste into Claude for a Mermaid ERD.</td></tr><tr><td>Field Index and Schemas index <span class="badge badge-new">New</span></td><td>A master Field Index across every schema, and a Schemas index.</td></tr><tr><td>Coverage and top values <span class="badge badge-new">New</span></td><td><code>--data-dict</code>: real <strong>coverage %</strong> and <strong>top-5 example values</strong> per field, tallied from actual ingested records sampled as Snappy-Parquet through the Data Access API. One download covers every field at once: no Query Service, no per-field calls.</td></tr></tbody></table></div>
+<div class="alert alert-note"><p class="alert-label">Note</p><p><strong>Reading coverage.</strong> Coverage is sampled from up to <code>--dd-rows</code> records (default 1000), not the whole dataset: it means <em>roughly how often this is populated</em>, not an exact figure. Busy datasets make Catalog time out when asked to sort every batch they have ever held, so the tool filters <code>status=success</code> server-side and steps the page size down (20 → 5 → 1) rather than giving up; a narrower sample beats no coverage, and the log says when it happens. Adobe's own consolidation batches are skipped: Catalog advertises them with the combined record count, but the Data Access API refuses them outright (<code>DTAC-4000</code>). Nothing is lost, because the batches they absorbed are still served individually.</p></div>
+<p>For more information, read the <a href="https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/README.md">README</a>.</p>
+<p class="foot">Built from RELEASE_NOTES.md by release_notes_html.py. Barry Mann (barrymann.com).</p></main></div>
+</body>
+</html>

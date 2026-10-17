@@ -1,435 +1,441 @@
-# Data Dictionary — release notes
+# Data Dictionary release notes
 
-Version history for [`data_dictionary_v3.py`](data_dictionary_v3.py), newest
-first. Every workbook the tool writes carries its version, the commit that
-produced it, and a link back to this file, so a dictionary found months later
-can be traced to exactly what the code did at the time.
+**Last update:** October 16, 2026 · **Latest version:** v3.4.11 · **Script:** [`data_dictionary_v3.py`](data_dictionary_v3.py)
 
----
+> [!TIP]
+> Every workbook the Data Dictionary writes carries its version, the commit
+> that produced it and a link back to this page, so a dictionary found months
+> later can be traced to exactly what the code did at the time. The notes
+> come in two editions: this Markdown file, and a colour HTML edition,
+> `RELEASE_NOTES.html`, built from it by
+> [`release_notes_html.py`](release_notes_html.py). How to run the tool: the
+> [README](README.md).
 
-## v3.4.11 — 2026-10-16
+**Labels:** ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) a new capability · ![Updated](https://img.shields.io/badge/Updated-1F5FA8?style=flat-square) a change to something that already existed · ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square) a bug fix · ![Beta](https://img.shields.io/badge/Beta-6E3FA3?style=flat-square) works, but still being tuned
 
-**The run keeps the PC awake.** On 2026-10-16 the machine went into Modern
-Standby part-way through prod's run and froze it for 76 minutes (18:43 to
-20:01); nothing failed, it simply stopped. The dictionary now asks Windows to
-stay awake from the moment a credential is chosen until the run ends,
-however it ends. On a Modern Standby machine the screen turning off is what
-triggers standby, so the screen is held on too. The hold belongs to the
-process and goes when it exits, so the power settings are never changed.
-Closing the lid or pressing the power button still sleeps.
-
----
-
-## v3.4.10 — 2026-10-16
-
-**A hidden Dropped Field Index.** The dictionary is meant to be a census, so
-the schemas it leaves out are now inventoried too: every field of every
-dropped schema, with its dot-notation path, type and display name, the
-schema, why it was dropped, its dataset count and SQL table names. It is an
-inventory only, with no coverage or sample values. The Field Index header
-points to it for a field that isn't there. The Dropped Schemas tab gains a
-Fields count per schema ("could not be read" where the fetch failed).
-
-Cost in prod: about 2,800 extra schema fetches (~0.13s each, five or six
-minutes) and roughly 244,000 rows on a hidden tab.
+| Release date | Version | Highlights |
+| --- | --- | --- |
+| [October 16, 2026](#october-16-2026) | v3.4.8 – v3.4.11 | Lookup schemas kept; Dropped Schemas and Dropped Field Index tabs; the run keeps the PC awake |
+| [October 8, 2026](#october-8-2026) | v3.4.7 | Overlap tabs; one workbook per tool |
+| [October 6, 2026](#october-6-2026) | v3.4.6 | Audience complexity score (beta) |
+| [September 30, 2026](#september-30-2026) | v3.4.5 | No more silent PQL truncation; the dictionary's own folder |
+| [September 29, 2026](#september-29-2026) | v3.4.4 | Snapshot tabs |
+| [September 25, 2026](#september-25-2026) | v3.4.3 | Friendly names and descriptions everywhere; "Dual labels" renamed |
+| [September 21, 2026](#september-21-2026) | v3.4.2 | Tab colour system; data-hygiene columns |
+| [August 14, 2026](#august-14-2026) | v3.4.0 – v3.4.1 | Complete Profile coverage; credential name gone from the workbook |
+| [August 13, 2026](#august-13-2026) | v3.3.0 | Audiences tab; provenance line; How to Use tab |
+| [Earlier releases](#earlier-releases) | v3.0.0 – v3.2.0 | The baseline; Profile coverage; SQL table names |
 
 ---
 
-## v3.4.9 — 2026-10-16
+## October 16, 2026
 
-**A hidden Dropped Schemas tab.** v3.4.8's bug went unnoticed because a
-dropped schema left no trace in the workbook: the reasons were printed to the
-console and then gone. Every schema the filters leave out is now listed on a
-hidden **Dropped Schemas** tab (right-click any tab › Unhide) with the drop
-reason in plain English, how many datasets use it, their SQL table names, its
-class and behaviour (ad-hoc / record / time-series). Schemas that still hold
-data come first, so a table you query that has no tab is easy to find, along
-with the reason it was dropped. The Summary and How to Use tabs point to it.
+**Release date: October 16, 2026** · v3.4.8 – v3.4.11
+
+New features and updates to existing features in the Data Dictionary:
+
+- **Schema filtering:** custom lookup schemas get their tabs back.
+- **Workbook:** two hidden tabs that account for everything the filters leave out.
+- **Running the dictionary:** a long run can no longer be frozen by the PC going to sleep.
+- **Known issues.**
+
+### Schema filtering
+
+The filters decide which of a sandbox's schemas get a tab. In prod they take
+2,830 schemas down to 64.
+
+**Fixes and improvements**
+
+| Fix | Description |
+| --- | --- |
+| Lookup schemas are kept ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square)<br>`v3.4.8` | Every class whose id ended in a long hex string was dropped as ad-hoc. Generated ad-hoc classes look like that, but so does any custom class made in the UI, so every lookup schema went out with them. In prod that was 20 schemas with datasets on 15 custom classes, among them **Tesco Product Lookup** (`tesco_product_lookup_dataset`, the product hierarchy behind `commercialHierarchyClassCode`), Marketplace Product, Baby Products, Store, Store Group, Store Manager, Promotion, GTIN/TPNB mapping, Recipes, Weather and Bank Suppression. The test is now the behaviour the schema extends: `xdm/data/adhoc` is dropped, `xdm/data/record` and `xdm/data/time-series` are kept. The restored tabs are green (the "other / lookup" hue) and sample coverage from their own datasets. |
+
+### Workbook
+
+The schemas the filters drop are now accounted for in the workbook itself, on
+two hidden tabs (right-click any tab › **Unhide**). v3.4.8's bug went unseen
+because a dropped schema left no trace: its reason was printed to the console
+and then gone.
+
+**New features**
+
+| Feature | Description |
+| --- | --- |
+| Dropped Schemas tab ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square)<br>`v3.4.9` | Every schema the filters leave out, with the drop reason in plain English, how many datasets use it, their SQL table names, its class and behaviour (ad-hoc / record / time-series). Schemas that still hold data come first, so a table you query that has no tab is easy to find, along with the reason it was dropped. The Summary and How to Use tabs point to it. |
+| Dropped Field Index tab ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square)<br>`v3.4.10` | The dictionary is meant to be a census, so the dropped schemas are inventoried too: every field of every dropped schema, with its dot-notation path, type and display name, the schema, why it was dropped, its dataset count and SQL table names. An inventory only, with no coverage or sample values. The Field Index header points to it for a field that isn't there, and the Dropped Schemas tab gains a **Fields** count per schema ("could not be read" where the fetch failed). In prod: about 244,000 rows, from about 2,800 extra schema fetches at ~0.13 s each, which adds five or six minutes. |
+
+### Running the dictionary
+
+**Fixes and improvements**
+
+| Fix | Description |
+| --- | --- |
+| The run keeps the PC awake ![Updated](https://img.shields.io/badge/Updated-1F5FA8?style=flat-square)<br>`v3.4.11` | On October 16 the machine went into Modern Standby part-way through prod's run and froze it for 76 minutes (18:43 to 20:01). Nothing failed; it simply stopped. The dictionary now asks Windows to stay awake from the moment a credential is chosen until the run ends, however it ends. On a Modern Standby machine the screen turning off is what triggers standby, so the screen is held on too. The hold belongs to the process and goes when it exits, so the power settings are never changed. Closing the lid or pressing the power button still sleeps. |
+
+### Known issues
+
+| Issue | Description |
+| --- | --- |
+| Creator columns show raw ids | The credential the dictionary runs with has lost access to the User Management API, so the user directory read fails and *Created by* / *Last modified by* on the Audiences tab show ids instead of names. |
+| Some coverage can't be read | Data Access file listings sometimes time out under load. A schema whose data exists but couldn't be read is marked "not confirmed empty" in the DATA COMPLETENESS block, never 0%. On October 16 this hit the Tesco Bank Suppression Lookup Schema. |
+| Complexity weights are uncalibrated | The audience complexity score is beta: its weights are judgement, not measurement, because AEP never reports what an audience cost to compute. |
+
+For more information, read the [README](README.md).
 
 ---
 
-## v3.4.8 — 2026-10-16
+## October 8, 2026
 
-**Lookup schemas are back.** Every class whose id ended in a long hex string
-was dropped as ad-hoc. Generated ad-hoc classes look like that, but so does
-any custom class made in the UI, so every lookup schema went out with them:
-in prod, 20 schemas with datasets on 15 custom classes, among them **Tesco
-Product Lookup** (`tesco_product_lookup_dataset`, the product hierarchy
-behind `commercialHierarchyClassCode`), Marketplace Product, Baby Products,
-Store, Store Group, Store Manager, Promotion, GTIN/TPNB mapping, Recipes,
-Weather and Bank Suppression.
+**Release date: October 8, 2026** · v3.4.7
 
-The test is now the behaviour the schema extends: `xdm/data/adhoc` is
-dropped, `xdm/data/record` and `xdm/data/time-series` are kept. These tabs are
-green (the "other / lookup" hue) and sample coverage from their own datasets.
+New features and updates to existing features in the Data Dictionary:
 
----
+- **Workbook:** the dataset overlap report, as two tabs.
+- **All tools:** one workbook per tool, and nothing else.
 
-## v3.4.7 — 2026-10-08
+### Workbook
 
-**Overlap tabs.** The dataset overlap report is folded in from
-[`overlap_report.py`](overlap_report.py), which stays runnable on its own:
+The dataset overlap report is folded in from
+[`overlap_report.py`](overlap_report.py), which stays runnable on its own.
 
-- **Overlap cut-list** — the profiles ONLY one dataset contributes (expire it,
-  save exactly that many), with a running total against the Addressable
-  Audience licence and the point where an overage would clear.
-- **Overlap full report** — every combination of datasets a profile is built
-  from, largest first. A sudden new combination is a new route in (this is
-  how the 3.1M shell profiles of 5–6 Oct showed up as "Tesco Profile Dataset
-  only").
+**New features**
 
-Also, house rule applied across the library: every tool writes **one
-workbook with a stable name, overwritten each run**, and nothing else — the
-CSV and JSON side-files are gone (`overlap_report`, `batch_eval_timing`,
-`failed_batch_report`, `dataset_census`, `sluggishness_detector`,
-`audit_batch_schedules_v2`, `dd_audience_countdown`, `audit_hunt`,
-`profile_jump`, `guardrail_audit`). The shared writer is `house_xlsx.py`.
+| Feature | Description |
+| --- | --- |
+| Overlap cut-list ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | The profiles ONLY one dataset contributes (expire it, save exactly that many), with a running total against the Addressable Audience licence and the point where an overage would clear. |
+| Overlap full report ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | Every combination of datasets a profile is built from, largest first. A sudden new combination is a new route in: this is how the 3.1M shell profiles of October 5–6 showed up, as "Tesco Profile Dataset only". |
+
+### All tools
+
+**Fixes and improvements**
+
+| Fix | Description |
+| --- | --- |
+| One workbook per tool ![Updated](https://img.shields.io/badge/Updated-1F5FA8?style=flat-square) | House rule applied across the library: every tool writes **one workbook with a stable name, overwritten each run**, and nothing else. The CSV and JSON side-files are gone from `overlap_report`, `batch_eval_timing`, `failed_batch_report`, `dataset_census`, `sluggishness_detector`, `audit_batch_schedules_v2`, `dd_audience_countdown`, `audit_hunt`, `profile_jump` and `guardrail_audit`. The shared writer is `house_xlsx.py`. |
+
+For more information, read the [README](README.md).
 
 ---
 
-## v3.4.6 — 2026-10-06
+## October 6, 2026
 
-**Audience complexity score (beta).** Not all audiences are created equal:
-one badly built audience can double the nightly batch run on its own, and
-AEP's own metrics never say what an audience cost to compute. The Audiences
-tab gains a **Complexity score (0-100)** and a **RED / AMBER / GREEN** on it,
-plus the reasons: *Why this score* (the points, in plain English), event scan,
-lookback days, lookup joins, joined fields, aggregations, depends-on count,
-largest base audience and its size, sequence steps, conditions, longest
-hard-coded value list, merge policies, and how many audiences use it.
+**Release date: October 6, 2026** · v3.4.6
+
+New features and updates to existing features in the Data Dictionary:
+
+- **Audiences:** a complexity score for every rule-based audience.
+
+### Audiences
+
+Not all audiences are created equal: one badly built audience can double the
+nightly batch run on its own, and AEP's own metrics never say what an audience
+cost to compute.
+
+**New features**
+
+| Feature | Description |
+| --- | --- |
+| Audience complexity score ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) ![Beta](https://img.shields.io/badge/Beta-6E3FA3?style=flat-square) | The Audiences tab gains a **Complexity score (0-100)** and a **RED / AMBER / GREEN** on it, plus the reasons: *Why this score* (the points, in plain English), event scan, lookback days, lookup joins, joined fields, aggregations, depends-on count, largest base audience and its size, sequence steps, conditions, longest hard-coded value list, merge policies, and how many audiences use it. The run log reports the RED / AMBER / GREEN counts per sandbox. The How to Use tab explains the score and the usual fix: shorten the lookback, or move the sum / count upstream into a computed attribute. |
+
+**How the score is built**
 
 The rules follow the two miaprova.com write-ups on expensive AEP segments
 (*Why your most expensive AEP audience might be your newest one*; *The right
-fix for expensive AEP segments: move the math upstream*). Four main cost
-drivers, each read off the PQL and the audience record:
+fix for expensive AEP segments: move the math upstream*). Each cost driver is
+read off the PQL and the audience record.
 
-1. **Event scan and lookback** — the longer the window the more events read
-   per profile per night; a scan with *no* time limit scores highest (35).
-2. **Lookup joins** to another class (products via gtin): the join runs per
-   event per profile (18, +4 per extra field, cap 25).
-3. **Aggregations that cannot short-circuit** — sum / average (15), count
-   (10), "occurs N times" (6), forall (4), cap 20.
-4. **Base audience size** — inSegment() on a big audience scans all of it
-   (+2 per dependency, +3 / +6 / +9 for a base of 1M / 5M / 20M profiles).
+| Cost driver | Points |
+| --- | --- |
+| Event scan and lookback | The longer the window, the more events are read per profile per night. A scan with *no* time limit scores highest (35). |
+| Lookup joins | A join to another class (products via gtin) runs per event per profile: 18, +4 per extra field, capped at 25. |
+| Aggregations that cannot short-circuit | sum / average 15, count 10, "occurs N times" 6, forall 4, capped at 20. |
+| Base audience size | `inSegment()` on a big audience scans all of it: +2 per dependency, +3 / +6 / +9 for a base of 1M / 5M / 20M profiles. |
+| Smaller signals | Sequences, condition count, lists of 100+ values, more than one merge policy, a negated event step and an overridden performance warning. |
 
-Plus sequences, condition count, lists of 100+ values, more than one merge
-policy, a negated event step and an overridden performance warning. RED is
-55 and over, AMBER 30 to 54. The weights live in `audience_complexity.py`
-(developed standalone, folded in) and are a first cut to be argued with.
-
-The run log reports the RED / AMBER / GREEN counts per sandbox. The How to Use tab explains the score and
-the usual fix (shorten the lookback, or move the sum / count upstream into a
-computed attribute). The size of each base audience is read from
+RED is 55 and over, AMBER 30 to 54. The weights live in
+`audience_complexity.py` (developed standalone, folded in) and are a first cut
+to be argued with. The size of each base audience is read from
 `/segment/definitions/<id>` once per run (a few hundred small reads).
 
-First prod run: 2,205 rule-based audiences scored — 64 RED, 482 AMBER,
-1,659 GREEN. Every RED is the same shape: an unlimited event scan, a product
-lookup join, and a base audience of 13 to 23 million profiles.
+> [!NOTE]
+> First prod run: 2,205 rule-based audiences scored: 64 RED, 482 AMBER,
+> 1,659 GREEN. Every RED is the same shape: an unlimited event scan, a product
+> lookup join, and a base audience of 13 to 23 million profiles.
+
+For more information, read the [README](README.md).
 
 ---
 
-## v3.4.5 — 2026-09-30
+## September 30, 2026
 
-**No more silent PQL truncation.** Excel caps a cell at 32,767 characters and
-the Audiences tab used to cut a rule at 32,000 without saying so — eleven
-published batch audiences (store-list rules, mostly) were incomplete in the
-2026-08-21 run.
+**Release date: September 30, 2026** · v3.4.5
 
-- **Own folder.** The dictionary now writes to `output/data_dictionary/`
-  (with its `archive/` beneath it) instead of the shared `output/` folder.
-- **Sidecar file.** The full, untruncated rule of every audience is written
-  to `output/data_dictionary/pql/audiences_pql_<sandbox>_<yyyymmdd>.jsonl`: one JSON
-  line per audience with `audience_id`, `audience_name`, `format`, `raw_pql`
-  and `readable_pql`. Old sidecars are archived with the old dictionary.
-- **Three new Audiences columns** after *PQL (raw pql/json)*: **PQL length**,
-  **PQL truncated in sheet** (yes/no, red when yes) and **PQL format** (`json`
-  for Adobe's syntax tree, `pql-text` for a rule held as PQL text, which is
-  complete but not JSON). *Unresolved tag ids* and *System tags* move three
-  columns right.
-- A cut cell now ends with `…[TRUNCATED – see sidecar]`.
-- The run log closes with a per-sandbox line: audiences, how many were cut,
-  count by format, and the sidecar path. The How to Use tab explains it.
+New features and updates to existing features in the Data Dictionary:
 
----
+- **Audiences:** no more silent PQL truncation.
+- **Output:** the dictionary gets its own folder.
 
-## v3.4.4 — 2026-09-29
+### Audiences
 
-**Snapshot tabs.** The first standalone tool to be folded into the dictionary:
-[`snapshot_tables.py`](snapshot_tables.py). The workbook gains two tabs,
-covering each sandbox it was run for:
+Excel caps a cell at 32,767 characters, and the Audiences tab used to cut a
+rule at 32,000 without saying so. Eleven published batch audiences (store-list
+rules, mostly) were incomplete in the August 21 run.
 
-- **Snapshot Summary** — one row per sandbox: the correct snapshot tables,
-  when the system evaluation is scheduled, when it last actually ran, when the
-  snapshot was written and how long that took.
-- **Snapshot Tables** — one row per snapshot export table, with its Query
-  Service table name and merge policy.
+**Fixes and improvements**
 
-Rows on the sandbox's **default merge policy** are green: those are the
-correct tables. The rest sit on other merge policies (added for debugging
-etc.) or carry none. **Time to run** is tagged RED / AMBER / GREEN (under 60
-min, 60 to 180 min, 180 min or more). Production sandboxes come first,
-development / PPE at the bottom. All times are UTC.
+| Fix | Description |
+| --- | --- |
+| Full-PQL sidecar file ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | The full, untruncated rule of every audience is written to `output/data_dictionary/pql/audiences_pql_<sandbox>_<yyyymmdd>.jsonl`: one JSON line per audience with `audience_id`, `audience_name`, `format`, `raw_pql` and `readable_pql`. Old sidecars are archived with the old dictionary. |
+| Three new Audiences columns ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | After *PQL (raw pql/json)*: **PQL length**, **PQL truncated in sheet** (yes/no, red when yes) and **PQL format** (`json` for Adobe's syntax tree, `pql-text` for a rule held as PQL text, which is complete but not JSON). *Unresolved tag ids* and *System tags* move three columns right. |
+| Truncation is marked ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square) | A cut cell now ends with `…[TRUNCATED – see sidecar]`. |
+| Run log summary ![Updated](https://img.shields.io/badge/Updated-1F5FA8?style=flat-square) | The run log closes with a per-sandbox line: audiences, how many were cut, count by format, and the sidecar path. The How to Use tab explains it. |
 
-The dictionary calls the tool's own collector and tab writer rather than
-copying them, so the standalone script produces identical tabs and there is
-one copy of the logic. This is the pattern for folding in further tools.
+### Output
 
-Also: the workbook's author property is now *Barry Mann (barrymann.com)*
-rather than the library's name.
+**Fixes and improvements**
+
+| Fix | Description |
+| --- | --- |
+| The dictionary's own folder ![Updated](https://img.shields.io/badge/Updated-1F5FA8?style=flat-square) | The dictionary now writes to `output/data_dictionary/` (with its `archive/` beneath it) instead of the shared `output/` folder. |
+
+For more information, read the [README](README.md).
 
 ---
 
-## v3.4.3 — 2026-09-25
+## September 29, 2026
 
-**"Dual labels" is gone.** The count of fields carrying an
-`alternateDisplayInfo` friendly display name was headed *Dual labels* on the
-Summary tab and *Dual-labelled fields* on the Schemas tab. That reads as a
-misspelling of **DULE** — Data Usage Labeling and Enforcement, Adobe's
-governance framework that controls access to objects and data through labels
-such as C8 and C12 — and the two are entirely different things.
+**Release date: September 29, 2026** · v3.4.4
 
-- Columns are now **Friendly labels** (Summary) and **Friendly-labelled
-  fields** (Schemas); the run log says *Friendly-name labels*.
-- The How to Use tab gains a "Friendly labels are not DULE labels" row that
-  spells out what DULE is and notes that DULE labels are not in the workbook
-  yet (still planned as a per-field column).
+New features and updates to existing features in the Data Dictionary:
 
-**Friendly names and descriptions everywhere.** The workbook now carries the
-human-readable name and the description next to every technical name it
-shows:
+- **Workbook:** snapshot tabs, the first standalone tool folded in.
 
-- **Fields** (every schema tab and the Field Index): a **Friendly Path**
-  column — the display names from the root down, e.g.
-  *Person > Full name > First name* for `person.name.firstName`, with a
-  level's key standing in where no title is set — and a **Description**
-  column. Both come from the schema itself; where a field carries no
-  description of its own, its `alternateDisplayInfo` description is used.
-- **Schemas**: a Description column on the Schemas tab, and each schema's
-  description under the title on its own tab (the field header row moves
-  from row 6 to row 7).
-- **Datasets**: a Description column (Catalog's `description`).
-- **Audiences**: a Description column next to the audience name.
+### Workbook
 
-A blank description means Adobe holds none for that object, not that it was
-dropped.
+The first standalone tool to be folded into the dictionary:
+[`snapshot_tables.py`](snapshot_tables.py). The dictionary calls the tool's own
+collector and tab writer rather than copying them, so the standalone script
+produces identical tabs and there is one copy of the logic. This is the
+pattern for folding in further tools.
 
-Also fixed: a schema titled "Acme …" lost the first letter of its tab name
-(the prefix strip took one character too many).
+**New features**
+
+| Feature | Description |
+| --- | --- |
+| Snapshot Summary ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | One row per sandbox: the correct snapshot tables, when the system evaluation is scheduled, when it last actually ran, when the snapshot was written and how long that took. **Time to run** is tagged RED / AMBER / GREEN (under 60 min, 60 to 180 min, 180 min or more). Production sandboxes come first, development / PPE at the bottom. All times are UTC. |
+| Snapshot Tables ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | One row per snapshot export table, with its Query Service table name and merge policy. Rows on the sandbox's **default merge policy** are green: those are the correct tables. The rest sit on other merge policies (added for debugging etc.) or carry none. |
+| Workbook author ![Updated](https://img.shields.io/badge/Updated-1F5FA8?style=flat-square) | The workbook's author property is now *Barry Mann (barrymann.com)* rather than the library's name. |
+
+For more information, read the [README](README.md).
 
 ---
 
-## v3.4.2 — 2026-09-21
+## September 25, 2026
 
-**A tab colour system that means something.**
+**Release date: September 25, 2026** · v3.4.3
+
+New features and updates to existing features in the Data Dictionary:
+
+- **Workbook:** friendly names and descriptions next to every technical name; "Dual labels" renamed.
+
+### Workbook
+
+**New features**
+
+| Feature | Description |
+| --- | --- |
+| Friendly Path and Description on every field ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | On every schema tab and the Field Index. Friendly Path is the display names from the root down, e.g. *Person > Full name > First name* for `person.name.firstName`, with a level's key standing in where no title is set. Both come from the schema itself; where a field carries no description of its own, its `alternateDisplayInfo` description is used. |
+| Descriptions for schemas, datasets and audiences ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | A Description column on the Schemas tab, and each schema's description under the title on its own tab (the field header row moves from row 6 to row 7). A Description column on the Datasets tab (Catalog's `description`) and on the Audiences tab, next to the audience name. A blank description means Adobe holds none for that object, not that it was dropped. |
+
+**Fixes and improvements**
+
+| Fix | Description |
+| --- | --- |
+| "Dual labels" is gone ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square) | The count of fields carrying an `alternateDisplayInfo` friendly display name was headed *Dual labels* (Summary) and *Dual-labelled fields* (Schemas). That reads as a misspelling of **DULE** (Data Usage Labeling and Enforcement, Adobe's governance framework that controls access to objects and data through labels such as C8 and C12), which is an entirely different thing. The columns are now **Friendly labels** and **Friendly-labelled fields**, and the run log says *Friendly-name labels*. The How to Use tab gains a "Friendly labels are not DULE labels" row explaining what DULE is and that DULE labels are not in the workbook yet (still planned as a per-field column). |
+| Tab names keep their first letter ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square) | A schema titled "Acme …" lost the first letter of its tab name: the prefix strip took one character too many. |
+
+For more information, read the [README](README.md).
+
+---
+
+## September 21, 2026
+
+**Release date: September 21, 2026** · v3.4.2
+
+New features and updates to existing features in the Data Dictionary:
+
+- **Workbook:** a tab colour system that means something; data-hygiene columns.
+- **Coverage sampling:** honest completeness statuses.
+
+### Workbook
 
 Purple used to mean only "built on the XDM Individual Profile class". A
 Profile-class schema whose datasets were all disabled for Unified Profile was
-still purple — five tabs in a prod run (raw feeds, backups, pattern experiments)
-— and, worse, its coverage was sampled from the Profile Snapshot Export, where
-its rows never land, so it read as empty.
+still purple (five tabs in a prod run: raw feeds, backups, pattern
+experiments) and, worse, its coverage was sampled from the Profile Snapshot
+Export, where its rows never land, so it read as empty.
 
-Every schema tab is now coloured on two axes:
+**New features**
 
-| | In Profile (≥1 dataset enabled) | Not in Profile |
-|---|---|---|
-| XDM Individual Profile class | dark purple | light purple |
-| XDM ExperienceEvent class | dark blue | light blue |
-| Other / lookup class | dark green | light green |
+| Feature | Description |
+| --- | --- |
+| Tab colour system ![Updated](https://img.shields.io/badge/Updated-1F5FA8?style=flat-square) | Every schema tab is coloured on two axes: the hue is the class, the shade is whether the data reaches Unified Profile (see the table below). "In Profile" is read from each dataset's `tags.unifiedProfile`, the same signal the Datasets tab's Profile column shows. Only **dark purple** schemas are in the merged union and sample coverage from the Profile Snapshot Export; every other schema samples its own datasets (the tab header's `source:` note says which). A six-swatch colour key at the top of the Summary tab explains the system. |
+| Data-hygiene columns ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | On the Schemas and Datasets tabs, straight from Catalog's `extensions`: **Kind** (Profile / Event / Custom) and, on Schemas, **In Profile** (Y/N); **Data lake GB** and **Data lake rows** (`adobe_lakeHouse.metrics`); **Data lake TTL (days)** (`adobe_lakeHouse.rowExpiration.ttlValue`); **Profile GB** and **Profile TTL (days)** (`adobe_unifiedProfile.metrics` / `rowExpiration`). TTLs are in days (months = 30, years = 365) so they sort; blank means no expiration is set. Schemas roll their datasets up: sizes sum, TTL is the longest. Reverse-sort by GB or TTL and filter by Kind straight from the header row. |
 
-- "In Profile" is read from each dataset's `tags.unifiedProfile` — the same
-  signal the Datasets tab's Profile column shows.
-- Only **dark purple** schemas are in the merged union and sample coverage
-  from the Profile Snapshot Export; every other schema samples its own
-  datasets (the tab header's `source:` note says which).
-- A six-swatch **colour key** at the top of the Summary tab explains the system.
+| Class | In Profile (≥1 dataset enabled) | Not in Profile |
+| --- | --- | --- |
+| XDM Individual Profile | dark purple | light purple |
+| XDM ExperienceEvent | dark blue | light blue |
+| Other / lookup | dark green | light green |
 
-**Data-hygiene columns on the Schemas and Datasets tabs.** Picking the
-profile-enabled datasets and their sizes out of the UI is painful, so the
-workbook now carries, straight from Catalog's `extensions`:
+### Coverage sampling
 
-- **Kind** — Profile / Event / Custom (the class of the schema the dataset
-  feeds) and, on Schemas, **In Profile** (Y/N).
-- **Data lake GB** and **Data lake rows** (`adobe_lakeHouse.metrics`).
-- **Data lake TTL (days)** (`adobe_lakeHouse.rowExpiration.ttlValue`).
-- **Profile GB** and **Profile TTL (days)** (`adobe_unifiedProfile.metrics` /
-  `rowExpiration`).
+**Fixes and improvements**
 
-TTLs are shown in days (months = 30, years = 365) so they sort; blank means no
-expiration is set. Schemas roll their datasets up: sizes sum, TTL is the
-longest. Every table already has header filters, so reverse-sort by GB or TTL
-and filter by Kind straight from the header row.
+| Fix | Description |
+| --- | --- |
+| No false PARTIAL ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square) | A partition that parses to 0 rows no longer marks a schema PARTIAL ("0 batch(es) failed to read"). Only real read failures do. |
+| MISSING says why ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square) | MISSING no longer blames "504/timeout" unconditionally. The same status is produced by a 403 when the credential is denied a dataset's labelled fields, and the text now says so. |
+| Full batch ids in the log ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square) | The run log prints full batch ids. They were cut to 24 of 26 characters, so they could not be pasted into the API. |
 
-**Honest completeness statuses.** A partition that parses to 0 rows no longer
-marks a schema PARTIAL ("0 batch(es) failed to read") — only real read
-failures do. MISSING no longer blames "504/timeout" unconditionally: the same
-status is produced by a 403 when the credential is denied a dataset's labelled
-fields, and the text now says so. The run log prints full batch ids (they were
-truncated to 24 of 26 characters, so they could not be pasted into the API).
+For more information, read the [README](README.md).
 
 ---
 
-## v3.4.1 — 2026-08-14
+## August 14, 2026
 
-**Complete coverage on Profile schemas.**
+**Release date: August 14, 2026** · v3.4.0 – v3.4.1
+
+New features and updates to existing features in the Data Dictionary:
+
+- **Coverage sampling:** complete coverage on Profile schemas.
+- **Workbook:** the credential name is gone from the workbook; release notes are linked from it.
+
+### Coverage sampling
 
 A prod run came back with 16 of 33 schema tabs flagged `MISSING`. All 16 were
-Profile-class, and all 16 failed for one reason: a single gateway 504.
+Profile-class, and all 16 failed for one reason: a single gateway 504. Every
+Profile-class schema samples the *same* Profile Snapshot Export union, but
+each one re-downloaded the ~127 MB partition for itself: sixteen downloads of
+identical data, and sixteen chances to hit a 504. The `snap_unreadable` cache
+added in v3.2 refused to retry a snapshot that had already failed, so **the
+first failure became MISSING coverage for every Profile schema behind it**.
 
-Every Profile-class schema samples the *same* Profile Snapshot Export union —
-but each one re-downloaded the ~127 MB partition for itself. That was both
-slow (sixteen downloads of identical data) and fragile (sixteen independent
-chances to hit a 504). The `snap_unreadable` cache added in v3.2 kept the
-runtime sane by refusing to retry a snapshot that had already failed, but it
-also meant **the first failure became MISSING coverage for every Profile schema
-behind it**.
+**Fixes and improvements**
 
-- The snapshot is now sampled **once per sandbox** and the rows reused in
-  memory for every Profile-class schema. One download, not sixteen.
-- A **retry pass** runs at the end: any schema still `UNREADABLE` is tried once
-  more before the workbook is written, with the snapshot cache cleared so the
-  union gets a genuine second attempt. It costs nothing when the first pass was
-  clean.
-- A sampling **exception** is now classified as `unreadable` rather than
-  falling through unlabelled, so it lands in the DATA COMPLETENESS block
-  instead of reading as "not sampled".
+| Fix | Description |
+| --- | --- |
+| One snapshot download per sandbox ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square)<br>`v3.4.1` | The snapshot is sampled **once per sandbox** and the rows reused in memory for every Profile-class schema. One download, not sixteen. In the log, Profile schemas after the first say `reusing the snapshot sample already downloaded this run (N rows, no re-download)`. |
+| Retry pass ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square)<br>`v3.4.1` | At the end of sampling, any schema still `UNREADABLE` is tried once more before the workbook is written, with the snapshot cache cleared so the union gets a genuine second attempt. It costs nothing when the first pass was clean, and announces itself in the log as `RETRY PASS`. |
+| Sampling errors are classified ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square)<br>`v3.4.1` | A sampling **exception** is now `unreadable` rather than falling through unlabelled, so it lands in the DATA COMPLETENESS block instead of reading as "not sampled". |
 
-*Reading the log:* Profile schemas after the first now say `reusing the
-snapshot sample already downloaded this run (N rows, no re-download)`, and the
-retry pass announces itself as `RETRY PASS`.
+### Workbook
 
----
+Titles inside the file used to fall back to the credential's *service name*,
+the key under which a credential is filed in the OS vault. A workbook read
+with a key stored as `<name>` was headed "Data Dictionary — `<Name>`", putting
+an artefact of our own key management exactly where the reader expects the
+subject of the report. It also implied the wrong thing: the credential says
+who *read* the sandbox, not what the document is *about*.
 
-## v3.4.0 — 2026-08-14
+**Fixes and improvements**
 
-**The credential name is gone from the workbook.**
+| Fix | Description |
+| --- | --- |
+| The credential name is gone ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square)<br>`v3.4.0` | Workbook titles use a client name **only** when the credential record carries an explicit `client` key. With no client configured, every title identifies the workbook by **sandbox**, the same thing the filename has said since v3.3: a prod run is headed "Data Dictionary v3.4.0 — prod". This applies to all four titled tabs: Summary, Field Index, Datasets, Audiences. The console banner still names the credential set, which is operationally useful and never leaves your machine. |
+| Release notes are linked ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square)<br>`v3.4.0` | The provenance line on every tab ends with a link to this page, and the How to Use tab gains a clickable **"What's new in v3.4.0"** link. |
 
-Titles inside the file used to fall back to the credential's *service name* —
-the key under which a credential is filed in the OS vault. A workbook read with
-a key stored as `<name>` was headed **“Data Dictionary — `<Name>`”**, putting an
-artefact of our own key management exactly where the reader expects the subject
-of the report. It also implied the wrong thing: the credential says who *read*
-the sandbox, not what the document is *about*.
+> [!IMPORTANT]
+> To show a real client name in the titles, add a `client` key to that
+> credential record. Otherwise you get the sandbox, which is usually what you
+> wanted anyway.
 
-- Workbook titles now use a client name **only** when the credential record
-  carries an explicit `client` key.
-- With no client configured, every title identifies the workbook by **sandbox**
-  — the same thing the filename has said since v3.3. A prod run is headed
-  *“Data Dictionary v3.4.0 — prod”*.
-- Applies to all four titled tabs: Summary, Field Index, Datasets, Audiences.
-- The console banner still names the credential set, which is operationally
-  useful and never leaves your machine.
-
-**Release notes are linked from the workbook.**
-
-- The provenance line on every tab now ends with a link to this file.
-- The How to Use tab gains a clickable **“What's new in v3.4.0”** link.
-
-*Upgrade note:* if you want a real client name in the titles, add a `client`
-key to that credential record. Otherwise you get the sandbox, which is usually
-what you wanted anyway.
+For more information, read the [README](README.md).
 
 ---
 
-## v3.3.0 — 2026-08-13
+## August 13, 2026
 
-**Readability, provenance, and the first half of the credential-name fix.**
+**Release date: August 13, 2026** · v3.3.0
 
-- **Audiences tab** — every audience with its tags, who built it, who last
-  changed it, and the segmentation rule (PQL) rendered readable. Rules
-  containing event-sequence or time-window clauses are marked `partial` and
-  show `<...>` rather than pretending to be complete; the raw definition is
-  kept alongside.
-- **Provenance line on every tab** — when the run happened, which script
-  version, which commit last touched the script, and a loud red warning when
-  the working tree had uncommitted changes (in which case the commit id does
-  *not* describe the code that produced the file).
-- **How to Use tab**, placed second so it sits beside the Summary rather than
-  behind thirty schema tabs. Written for someone who has never seen the
-  workbook before, including the traps: coverage is a *sample*, and `MISSING`
-  is not the same as `0%`.
-- **Filters and frozen headers on every tab.**
-- **Credential name dropped from the filename** in favour of the sandbox:
-  `Data Dictionary - prod - 2026-08-14.xlsx`. (v3.4 finished the job inside the
-  file.)
-- Tag vocabulary and user directory are fetched **once per org** rather than
-  per sandbox.
+New features and updates to existing features in the Data Dictionary:
 
----
+- **Workbook:** readability, provenance, and the first half of the credential-name fix.
 
-## v3.2.0
+### Workbook
 
-**SQL table names, Profile flags, and honest gaps.**
+**New features**
 
-- **Datasets tab** mapping every dataset's friendly name → **Query Service
-  table name** (`tags['adobe/pqs/table']`) → schema. The system name is what
-  you `SELECT ... FROM`, and it differs from the friendly name; without this
-  the workbook could not be used to write SQL.
-- *Table name(s)* columns on the Schemas index and Field Index, and the SQL
-  table name in each schema tab's header block.
-- **Profile column** on the Datasets tab (`tags.unifiedProfile`), flagging both
-  Profile-enabled datasets and the Profile Snapshot Export(s), so you know
-  which tables hold whole profiles. Profile rows sort to the top.
-- **Data-completeness warnings**, so a partial dictionary is never read as
-  gospel. Any schema whose coverage is missing, partial or empty is listed in a
-  Summary **DATA COMPLETENESS** block and banner-flagged on its own tab.
-  `MISSING` is deliberately distinguished from `0%`.
-- The Profile Snapshot Export is sampled **once per run**: if its (huge) file
-  manifest times out under load, the failure is cached so the remaining
-  Profile schemas fail fast instead of each re-hitting a dead snapshot.
-- Bundled Luma demo dataset (`demo/luma/`) — Adobe's public sample data,
-  organised and tenant-normalised for offline demos and tests.
+| Feature | Description |
+| --- | --- |
+| Audiences tab ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | Every audience with its tags, who built it, who last changed it, and the segmentation rule (PQL) rendered readable. Rules containing event-sequence or time-window clauses are marked `partial` and show `<...>` rather than pretending to be complete; the raw definition is kept alongside. |
+| Provenance line on every tab ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | When the run happened, which script version, which commit last touched the script, and a loud red warning when the working tree had uncommitted changes (in which case the commit id does *not* describe the code that produced the file). |
+| How to Use tab ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | Placed second, so it sits beside the Summary rather than behind thirty schema tabs. Written for someone who has never seen the workbook before, including the traps: coverage is a *sample*, and `MISSING` is not the same as `0%`. |
+| Filters and frozen headers ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | On every tab. |
+
+**Fixes and improvements**
+
+| Fix | Description |
+| --- | --- |
+| Credential name dropped from the filename ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square) | In favour of the sandbox: `Data Dictionary - prod - 2026-08-14.xlsx`. v3.4 finished the job inside the file. |
+| Org-level reads once per run ![Updated](https://img.shields.io/badge/Updated-1F5FA8?style=flat-square) | The tag vocabulary and user directory are fetched **once per org** rather than per sandbox. |
+
+For more information, read the [README](README.md).
 
 ---
 
-## v3.1.0
+## Earlier releases
 
-**Profile coverage fix.**
+**Release date: not recorded** · v3.0.0 – v3.2.0
 
-A Profile-class schema is the post-merge **union** — identity-deduped,
-last-write-wins — so sampling its *feeding* datasets tallies pre-merge
-fragments and reads falsely sparse. Every Profile schema was under-reporting
-coverage.
+### v3.2.0
 
-- Profile-class schemas are now sampled from the **Profile Snapshot Export**
-  dataset belonging to the **default merge policy**, auto-resolved: default
-  merge policy → the snapshot dataset tagged with that policy id whose
-  `schemaRef` is `profile__union`.
-- Snapshots are enormous, so the tool downloads the **smallest non-empty
-  partition file** rather than whichever comes first.
-- Override with `--profile-snapshot=<datasetId>` where the default isn't the
-  one you want.
+SQL table names, Profile flags, and honest gaps.
 
----
+| Feature | Description |
+| --- | --- |
+| Datasets tab ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | Maps every dataset's friendly name → **Query Service table name** (`tags['adobe/pqs/table']`) → schema. The system name is what you `SELECT ... FROM`, and it differs from the friendly name; without it the workbook could not be used to write SQL. *Table name(s)* columns on the Schemas index and Field Index, and the SQL table name in each schema tab's header block. |
+| Profile column ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | On the Datasets tab (`tags.unifiedProfile`), flagging both Profile-enabled datasets and the Profile Snapshot Export(s), so you know which tables hold whole profiles. Profile rows sort to the top. |
+| Data-completeness warnings ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | So a partial dictionary is never read as gospel: any schema whose coverage is missing, partial or empty is listed in a Summary **DATA COMPLETENESS** block and banner-flagged on its own tab. `MISSING` is deliberately distinguished from `0%`. |
+| Snapshot sampled once per run ![Updated](https://img.shields.io/badge/Updated-1F5FA8?style=flat-square) | If the Profile Snapshot Export's (huge) file manifest times out under load, the failure is cached so the remaining Profile schemas fail fast instead of each re-hitting a dead snapshot. |
+| Luma demo dataset ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | `demo/luma/`: Adobe's public sample data, organised and tenant-normalised for offline demos and tests. |
 
-## v3.0.0
+### v3.1.0
 
-**The baseline.** Every tenant XDM schema pulled from an AEP sandbox, filtered
+Profile coverage fix. A Profile-class schema is the post-merge **union**
+(identity-deduped, last-write-wins), so sampling its *feeding* datasets
+tallies pre-merge fragments and reads falsely sparse. Every Profile schema
+was under-reporting coverage.
+
+| Fix | Description |
+| --- | --- |
+| Profile schemas sample the snapshot ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square) | Profile-class schemas are sampled from the **Profile Snapshot Export** dataset belonging to the **default merge policy**, resolved automatically: default merge policy → the snapshot dataset tagged with that policy id whose `schemaRef` is `profile__union`. |
+| Smallest partition first ![Updated](https://img.shields.io/badge/Updated-1F5FA8?style=flat-square) | Snapshots are enormous, so the tool downloads the **smallest non-empty partition file** rather than whichever comes first. |
+| `--profile-snapshot` override ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | `--profile-snapshot=<datasetId>` for when the default isn't the one you want. |
+
+### v3.0.0
+
+The baseline: every tenant XDM schema pulled from an AEP sandbox, filtered
 down to the ones that matter, and written to a tabbed, strictly-confidential
 Excel workbook.
 
-- Filtering with a printed **KEEP / DROP verdict per schema**, so exclusions are
-  auditable rather than silent: `no-dataset`, `adhoc`, `ajo`, `system`, `test`.
-  On a large tenant this is the difference between 2,400 schemas and the ~30
-  that are real.
-- One tab per kept schema — full field list in dot notation with data types,
-  identities, relationships and friendly (`alternateDisplayInfo`) labels —
-  ready to paste into Claude for a Mermaid ERD.
-- Master **Field Index** across every schema, and a **Schemas** index.
-- `--data-dict`: real **coverage %** and **top-5 example values** per field,
-  tallied from actual ingested records sampled as Snappy-Parquet through the
-  Data Access API. One download covers every field at once — no Query Service,
-  no per-field calls.
+| Feature | Description |
+| --- | --- |
+| Auditable filtering ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | A printed **KEEP / DROP verdict per schema**, so exclusions are auditable rather than silent: `no-dataset`, `adhoc`, `ajo`, `system`, `test`. On a large tenant this is the difference between 2,400 schemas and the ~30 that are real. |
+| One tab per schema ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | The full field list in dot notation with data types, identities, relationships and friendly (`alternateDisplayInfo`) labels, ready to paste into Claude for a Mermaid ERD. |
+| Field Index and Schemas index ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | A master Field Index across every schema, and a Schemas index. |
+| Coverage and top values ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | `--data-dict`: real **coverage %** and **top-5 example values** per field, tallied from actual ingested records sampled as Snappy-Parquet through the Data Access API. One download covers every field at once: no Query Service, no per-field calls. |
 
-### Notes on reading coverage
+> [!NOTE]
+> **Reading coverage.** Coverage is sampled from up to `--dd-rows` records
+> (default 1000), not the whole dataset: it means *roughly how often this is
+> populated*, not an exact figure. Busy datasets make Catalog time out when
+> asked to sort every batch they have ever held, so the tool filters
+> `status=success` server-side and steps the page size down (20 → 5 → 1)
+> rather than giving up; a narrower sample beats no coverage, and the log
+> says when it happens. Adobe's own consolidation batches are skipped: Catalog
+> advertises them with the combined record count, but the Data Access API
+> refuses them outright (`DTAC-4000`). Nothing is lost, because the batches
+> they absorbed are still served individually.
 
-- Coverage is sampled from up to `--dd-rows` records (default 1000), not the
-  whole dataset. It means *roughly how often this is populated*, not an exact
-  figure.
-- Busy datasets make Catalog time out when asked to sort every batch they have
-  ever held. The tool filters `status=success` server-side and then steps the
-  page size down (20 → 5 → 1) rather than giving up; a narrower sample beats no
-  coverage at all, and it says so in the log when it happens.
-- Adobe's own consolidation batches are skipped — Catalog advertises them with
-  the combined record count, but the Data Access API refuses them outright
-  (`DTAC-4000`). Nothing is lost: the batches they absorbed are still served
-  individually.
+For more information, read the [README](README.md).

@@ -37,6 +37,7 @@ The toolkit spans two product ranges:
 | [`aep_usage_log.py`](aep_usage_log.py) | Who is actively using AEP: per-user **activity** (not sign-ins) from the audit log over the last N days, with the tech-account suppression-list noise excluded and counted separately. |
 | [`audience_renamer.py`](audience_renamer.py) | **IN DEVELOPMENT — DO NOT USE.** Parked, unfinished: renaming a development sandbox's audiences to a naming convention. Refuses to run. |
 | [`data_dictionary_v3.py`](data_dictionary_v3.py) | **Data Dictionary v3.4.** Sucks out every XDM schema, filters to the ones that matter, and writes a tabbed, *strictly-confidential* workbook: a master field index, one tab per schema (ready for Claude → Mermaid ERDs), a Datasets/SQL-table map, an Audiences tab, and — with `--data-dict` — real field coverage + top-5 example values sampled in-memory. [Release notes](RELEASE_NOTES.md). |
+| [`release_notes_html.py`](release_notes_html.py) | Builds `RELEASE_NOTES.html`, the colour edition of the Data Dictionary release notes (laid out like Adobe Experience League release notes), from `RELEASE_NOTES.md`. Re-run it after editing the Markdown. Stdlib only. |
 
 The tools are credential-driven and tenant-aware, so the same scripts run
 cleanly across multiple Adobe orgs without folder collisions. `creds/*.json`
