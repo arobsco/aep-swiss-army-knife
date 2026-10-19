@@ -9,7 +9,7 @@ for a Mermaid ERD), a Datasets tab mapping every dataset's friendly name to its
 SQL table name, an Audiences tab, two Snapshot tabs (every snapshot export
 table with its merge policy, system evaluation time and time to run -- folded
 in from snapshot_tables.py), and -- with --data-dict -- real field coverage +
-top-5 example values sampled from ingested data.
+top-10 example values sampled from ingested data (PII is obfuscated -- see below).
 
 The workbook is marked STRICTLY CONFIDENTIAL: with --data-dict it contains
 real sampled customer data.
@@ -49,7 +49,7 @@ labels such as C8 / C12, and is not in the workbook yet.
 
 Phase 2 -- data dictionary (--data-dict): for each field, sample real ingested
 records (Snappy-Parquet) via the Data Access API and tally COVERAGE (% of
-sampled rows where the field is populated) and the TOP-5 values
+sampled rows where the field is populated) and the TOP-10 values
 (value(count), pipe-separated). One download covers every field at once -- no
 Query Service, no per-field calls. Two extra columns are added to each sampled
 schema's tab. Defaults to ALL kept schemas (a bare --data-dict samples every
@@ -86,6 +86,13 @@ v3.2 -- Two things ship under this label:
     (coverage MISSING != 0%). The Profile Snapshot Export is sampled once per run:
     if its (huge) file manifest 504s under load, the failure is cached so the
     other Profile schemas fail fast instead of each re-hitting the dead snapshot.
+
+v3.4.12 -- Two changes to the --data-dict sample columns. (1) TOP values go
+from 5 to 10. (2) PII obfuscation: any sampled value that is an email address,
+or that sits in an identifier / contact field (user id, CRM id, phone, ...), is
+starred by two characters BEFORE it is tallied -- whether or not the field
+carries a DULE governance label. The workbook never reproduces a whole real
+identifier. See _mask_pii / _PII_TOKENS.
 
 v3.4.11 -- The run holds Windows awake (system and screen) until it ends, so
 Modern Standby can't freeze a long run part-way. The hold dies with the
@@ -149,13 +156,12 @@ what the filename has said since v3.3. Every tab also carries a link to the
 release notes, so a dictionary found months later can be traced to what the
 version that produced it actually did.
 
-v3.4.3 -- "Dual labels" is gone. The alternateDisplayInfo friendly-name count
-was headed "Dual labels" on the Summary tab and "Dual-labelled fields" on the
-Schemas tab, which reads as a misspelling of DULE -- Adobe's Data Usage
-Labeling and Enforcement framework for object and data access control -- and
-those are a different thing entirely. The columns now say "Friendly labels" /
-"Friendly-labelled fields", and the How to Use tab explains what DULE is and
-that DULE labels are not in this workbook yet.
+v3.4.3 -- The friendly-label headings are renamed. The alternateDisplayInfo
+friendly-name count used column headings that read like a misspelling of DULE
+-- Adobe's Data Usage Labeling and Enforcement framework for object and data
+access control -- which is a different thing entirely. The columns now say
+"Friendly labels" / "Friendly-labelled fields", and the How to Use tab explains
+what DULE is and that DULE labels are not in this workbook yet.
 Also: friendly names and descriptions everywhere. Every field row (schema tabs
 and the Field Index) gains a Friendly Path (display names from the root down,
 "Person > Full name > First name") and a Description (the field's own, or its
@@ -236,8 +242,8 @@ from house_xlsx import Book
 # Constants
 # ----------------------------------------------------------------------------
 SCRIPT_NAME    = "data_dictionary_v3"
-SCRIPT_VERSION = "3.4.11"
-SCRIPT_DATE    = "2026-10-16"
+SCRIPT_VERSION = "3.4.12"
+SCRIPT_DATE    = "2026-10-18"
 SCRIPT_AUTHOR  = "Barry Mann (barrymann.com)"
 AUTHOR_SITE     = "https://barrymann.com"
 AUTHOR_LINKEDIN = "https://www.linkedin.com/in/barrymann/"
@@ -1302,9 +1308,61 @@ def _fmt_val(v):
     return str(v).replace("|", "/").replace("\n", " ").strip()[:40]
 
 
-def build_data_dict(rows, fields, top_n=5):
+# ----------------------------------------------------------------------------
+# PII obfuscation (v3.4.12)
+# ----------------------------------------------------------------------------
+# Star out two characters of any sampled value that is an email address, or that
+# sits in an identifier / contact field (user id, CRM id, phone, ...), WHETHER
+# OR NOT the field carries a DULE governance label -- the workbook never
+# reproduces a whole real identifier. Light-touch by design (exactly two
+# characters, per request): the value's shape and the top-N ranking survive, and
+# masking happens before tallying so counts reflect the masked value.
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# Leaf / path tokens that mark a field as PII even with no DULE label. Matched
+# against the lowercased leaf segment (and, for identityMap, the whole path).
+_PII_TOKENS = (
+    "email", "userid", "user_id", "username", "user_name",
+    "customerid", "customer_id", "crmid", "crm_id", "loyaltyid", "loyalty_id",
+    "membershipid", "membership_id", "accountid", "account_id",
+    "personid", "person_id", "subscriberid", "subscriber_id",
+    "ecid", "aaid", "mcid", "guid", "uuid",
+    "phone", "mobile", "msisdn", "telephone", "fax",
+    "ssn", "nationalid", "passport", "taxid",
+)
+
+
+def _star_two(s, start=1):
+    """Replace up to two characters of `s` with '*', starting at index `start`
+    (keeping the first character for readability)."""
+    if not s:
+        return s
+    i = min(start, len(s))
+    masked = min(2, len(s) - i)
+    return s[:i] + "*" * masked + s[i + masked:]
+
+
+def _mask_pii(s, fpath):
+    """Obfuscate PII in a single already-formatted sampled value. Emails lose
+    two characters of the local part; identifier / contact fields (matched by
+    name) lose two characters. Returns `s` unchanged when it reads as non-PII."""
+    if not s:
+        return s
+    # Email by VALUE -- regardless of field name or any DULE label.
+    if _EMAIL_RE.match(s):
+        local, at, domain = s.partition("@")
+        return _star_two(local, 1) + at + domain
+    # Identifier / contact fields by PATH.
+    low = fpath.lower()
+    leaf = low.rsplit(".", 1)[-1]
+    if "identitymap" in low or any(tok in leaf for tok in _PII_TOKENS):
+        return _star_two(s, 1)
+    return s
+
+
+def build_data_dict(rows, fields, top_n=10):
     """{field_path: {"coverage": int_pct, "top": "value(count) | ..."}}.
-    Coverage = % of sampled rows where the field is populated."""
+    Coverage = % of sampled rows where the field is populated. Sampled values
+    pass through _mask_pii first, so emails and identifier fields are starred."""
     from collections import Counter
     n = len(rows) or 1
     out = {}
@@ -1318,7 +1376,7 @@ def build_data_dict(rows, fields, top_n=5):
                 present += 1
             for v in vals:
                 if isinstance(v, (str, int, float, bool)):
-                    counter[_fmt_val(v)] += 1
+                    counter[_mask_pii(_fmt_val(v), fpath)] += 1
         out[fpath] = {
             "coverage": round(100 * present / n),
             "top": " | ".join(f"{val}({cnt})"
@@ -2714,7 +2772,7 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
          "name, friendly path (the display names from the root down, e.g. "
          "Person > Full name > First name), description, whether it is an "
          "identity, and (when the coverage pass ran) how often it is actually "
-         "populated plus its five commonest values."),
+         "populated plus its ten commonest values (PII starred)."),
         ("...read it in plain English",
          "Friendly Name / Description",
          "Every tab carries the human-readable name next to the technical one: "
@@ -2800,8 +2858,8 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
          "Summary / Schemas",
          "'Friendly labels' counts fields that carry a human-readable display "
          "name (Adobe's alternateDisplayInfo) -- the Friendly Name column on "
-         "each schema tab. DULE (Data Usage Labeling and Enforcement, often "
-         "misread as 'dual') is a different thing: Adobe's governance "
+         "each schema tab. DULE (Data Usage Labeling and Enforcement) is a "
+         "different thing: Adobe's governance "
          "framework that controls access to objects and data through labels "
          "such as C8 and C12. DULE labels are not in this workbook yet."),
         ("", "", ""),
@@ -2810,10 +2868,16 @@ def write_xlsx(results, client: str, datestr: str, snapshots=None, overlaps=None
          "all tabs",
          "Click any header arrow to filter. The header row stays put as you "
          "scroll."),
+        ("PII is obfuscated",
+         "sample values",
+         "In the TOP-10 sample values, email addresses and identifier / contact "
+         "fields (user id, CRM id, phone, ...) have two characters starred out, "
+         "whether or not the field carries a DULE label. Shapes and rankings "
+         "remain; whole real identifiers do not."),
         ("Confidential",
          "all tabs",
-         "With the coverage pass, this workbook contains real sampled customer "
-         "data. Treat it accordingly."),
+         "Even with PII obfuscated, the coverage pass means this workbook holds "
+         "real sampled customer data. Treat it accordingly."),
     ]
     hr = 5
     for c, nm in enumerate(("I want to...", "Go to", "What you'll find"), 1):
@@ -3508,8 +3572,8 @@ def prompt_data_dict(dd_rows: int = DD_DEFAULT_ROWS) -> str | None:
     print(bar)
     print(f"  {ANSI['bold']}Full data dictionary?{ANSI['reset']}")
     print(f"  {ANSI['dim']}Samples up to {dd_rows} real records per kept schema "
-          f"(downloads + parses\n  Parquet) to add COVERAGE % and TOP-5 values "
-          f"per field.\n  This can take several minutes -- much longer on big "
+          f"(downloads + parses\n  Parquet) to add COVERAGE % and TOP-10 values "
+          f"per field (PII starred).\n  This can take several minutes -- much longer on big "
           f"tenants.{ANSI['reset']}")
     print(bar)
     try:

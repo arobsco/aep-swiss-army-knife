@@ -78,7 +78,7 @@ First prod run (6 Oct 2026): 2,205 scored — 64 RED, 482 AMBER, 1,659 GREEN. Ev
 - **v3.2** — bundled Luma demo dataset (`demo/luma/`) **and** SQL table (system) names: a Datasets tab plus *SQL table name(s)* columns, so SQL can be formed against the right table straight from the workbook.
 - **v3.3** — Audiences tab, provenance line on every tab, a How to Use tab, filters/frozen headers everywhere, and the credential name dropped from the filename in favour of the sandbox.
 - **v3.4** — credential name removed from the workbook **titles** too (sandbox instead, unless a `client` key is configured), and a link to the release notes on every tab.
-- **v3.4.2 / v3.4.3** — a tab-colour system with meaning (hue = class, shade = enabled for Profile); friendly names and descriptions everywhere; "Dual labels" renamed to "Friendly labels".
+- **v3.4.2 / v3.4.3** — a tab-colour system with meaning (hue = class, shade = enabled for Profile); friendly names and descriptions everywhere; the friendly-label columns renamed to "Friendly labels".
 - **v3.4.4** — Snapshot Summary and Snapshot Tables tabs, folded in from `snapshot_tables.py`.
 - **v3.4.5** — the dictionary moves to its own folder (`output/data_dictionary/`); the full-PQL sidecar; silent PQL truncation ended.
 - **v3.4.6** — the audience **complexity score** (beta) with RED / AMBER / GREEN and the reasons, from `audience_complexity.py`.

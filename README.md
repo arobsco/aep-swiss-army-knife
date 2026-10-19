@@ -122,7 +122,7 @@ them all:
 
 Every tool that writes a workbook or deck follows these:
 
-- **Author is Barry Mann (barrymann.com).** Set the file's author and
+- **Author is Barry Mann ([barrymann.com](https://barrymann.com)).** Set the file's author and
   last-modified-by properties to `SCRIPT_AUTHOR` straight after creating it.
   Left alone, the library signs the file as itself (`openpyxl` /
   `python-pptx`), which is what shows under File > Info in Office.

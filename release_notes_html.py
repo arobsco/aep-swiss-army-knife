@@ -38,6 +38,9 @@ TARGET = SCRIPT_DIR / "RELEASE_NOTES.html"
 REPO_URL = "https://github.com/mannbarry2/aep-swiss-army-knife/blob/main/"
 PAGE_TITLE = "Data Dictionary Release Notes"
 AUTHOR = "Barry Mann (barrymann.com)"
+# Same author line, but with barrymann.com as a live link for the page footer
+# (the <meta name="author"> above stays plain text).
+AUTHOR_HTML = 'Barry Mann (<a href="https://barrymann.com">barrymann.com</a>)'
 
 ALERTS = {"NOTE": "Note", "TIP": "Tip", "IMPORTANT": "Important",
           "WARNING": "Warning", "CAUTION": "Caution"}
@@ -311,7 +314,7 @@ def build(md: str, fragment: bool = False) -> str:
         f'<main class="doc"><p class="crumbs"><span>AEP Swiss Army Knife</span>'
         f"<span>Data Dictionary</span><span>Release notes</span></p>\n{body}\n"
         f'<p class="foot">Built from RELEASE_NOTES.md by release_notes_html.py. '
-        f"{html.escape(AUTHOR)}.</p></main></div>"
+        f"{AUTHOR_HTML}.</p></main></div>"
     )
     head = (f"<title>{PAGE_TITLE}</title>\n"
             '<meta name="claude:viewport-fit-sides" content="cover">\n'

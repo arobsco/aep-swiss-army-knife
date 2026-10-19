@@ -20,7 +20,7 @@
 | [October 6, 2026](#october-6-2026) | v3.4.6 | Audience complexity score (beta) |
 | [September 30, 2026](#september-30-2026) | v3.4.5 | No more silent PQL truncation; the dictionary's own folder |
 | [September 29, 2026](#september-29-2026) | v3.4.4 | Snapshot tabs |
-| [September 25, 2026](#september-25-2026) | v3.4.3 | Friendly names and descriptions everywhere; "Dual labels" renamed |
+| [September 25, 2026](#september-25-2026) | v3.4.3 | Friendly names and descriptions everywhere; friendly-label columns renamed |
 | [September 21, 2026](#september-21-2026) | v3.4.2 | Tab colour system; data-hygiene columns |
 | [August 14, 2026](#august-14-2026) | v3.4.0 – v3.4.1 | Complete Profile coverage; credential name gone from the workbook |
 | [August 13, 2026](#august-13-2026) | v3.3.0 | Audiences tab; provenance line; How to Use tab |
@@ -224,7 +224,7 @@ pattern for folding in further tools.
 | --- | --- |
 | Snapshot Summary ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | One row per sandbox: the correct snapshot tables, when the system evaluation is scheduled, when it last actually ran, when the snapshot was written and how long that took. **Time to run** is tagged RED / AMBER / GREEN (under 60 min, 60 to 180 min, 180 min or more). Production sandboxes come first, development / PPE at the bottom. All times are UTC. |
 | Snapshot Tables ![New](https://img.shields.io/badge/New-2D7D46?style=flat-square) | One row per snapshot export table, with its Query Service table name and merge policy. Rows on the sandbox's **default merge policy** are green: those are the correct tables. The rest sit on other merge policies (added for debugging etc.) or carry none. |
-| Workbook author ![Updated](https://img.shields.io/badge/Updated-1F5FA8?style=flat-square) | The workbook's author property is now *Barry Mann (barrymann.com)* rather than the library's name. |
+| Workbook author ![Updated](https://img.shields.io/badge/Updated-1F5FA8?style=flat-square) | The workbook's author property is now *Barry Mann ([barrymann.com](https://barrymann.com))* rather than the library's name. |
 
 For more information, read the [README](README.md).
 
@@ -236,7 +236,7 @@ For more information, read the [README](README.md).
 
 New features and updates to existing features in the Data Dictionary:
 
-- **Workbook:** friendly names and descriptions next to every technical name; "Dual labels" renamed.
+- **Workbook:** friendly names and descriptions next to every technical name; the friendly-label columns renamed.
 
 ### Workbook
 
@@ -251,7 +251,7 @@ New features and updates to existing features in the Data Dictionary:
 
 | Fix | Description |
 | --- | --- |
-| "Dual labels" is gone ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square) | The count of fields carrying an `alternateDisplayInfo` friendly display name was headed *Dual labels* (Summary) and *Dual-labelled fields* (Schemas). That reads as a misspelling of **DULE** (Data Usage Labeling and Enforcement, Adobe's governance framework that controls access to objects and data through labels such as C8 and C12), which is an entirely different thing. The columns are now **Friendly labels** and **Friendly-labelled fields**, and the run log says *Friendly-name labels*. The How to Use tab gains a "Friendly labels are not DULE labels" row explaining what DULE is and that DULE labels are not in the workbook yet (still planned as a per-field column). |
+| Friendly-label columns renamed ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square) | The count of fields carrying an `alternateDisplayInfo` friendly display name used column headings that read like a misspelling of **DULE** (Data Usage Labeling and Enforcement, Adobe's governance framework that controls access to objects and data through labels such as C8 and C12), which is an entirely different thing. The columns are now **Friendly labels** and **Friendly-labelled fields**, and the run log says *Friendly-name labels*. The How to Use tab gains a "Friendly labels are not DULE labels" row explaining what DULE is and that DULE labels are not in the workbook yet (still planned as a per-field column). |
 | Tab names keep their first letter ![Fixed](https://img.shields.io/badge/Fixed-B35A00?style=flat-square) | A schema titled "Acme …" lost the first letter of its tab name: the prefix strip took one character too many. |
 
 For more information, read the [README](README.md).
