@@ -10,10 +10,18 @@ This is ACTIVITY, not sign-ins: an audit event is something a user did (read
 a schema, edit a journey, run a segment job). A user who logged in and did
 nothing leaves no trace here.
 
-Version 1.2.0 (2026-10-02)
+Version 1.3.0 (2026-10-19)
 
 Changelog
 ---------
+1.3.0  2026-10-19  Service / API accounts surfaced instead of only excluded.
+                   Every fetched @techacct.adobe.com event is now kept with
+                   full detail and two tabs are written: api_accounts (one row
+                   per tech-account id -- total/fetched/bulk events, days,
+                   first/last, work areas, top activities) and api_activity
+                   (one row per account + assetType + action). The noise
+                   account's bulk asset type stays counted-only (no per-action
+                   detail). No cache-key change: reruns reuse cached days.
 1.2.0  2026-10-02  Survives a stall: every request has a hard 2-minute limit
                    and is retried, and each finished day is cached under
                    output/aep_usage_log_cache/<sandbox>/, so a stopped run
@@ -114,8 +122,8 @@ from pathlib import Path
 import aep_creds  # keyring-backed credential store (replaces creds/*.json)
 
 SCRIPT_NAME = "aep_usage_log"
-SCRIPT_VERSION = "1.2.0"
-SCRIPT_DATE = "2026-10-02"
+SCRIPT_VERSION = "1.3.0"
+SCRIPT_DATE = "2026-10-19"
 SCRIPT_AUTHOR = "Barry Mann (barrymann.com)"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -453,6 +461,7 @@ def collect(client: AuditClient, opts) -> dict:
         logger.info("No dominant tech account found; fetching everything.")
 
     kept, noise = [], Counter()          # noise[(date, user, assetType, how)]
+    tech = []                            # every fetched @techacct event, full detail
     stats = {"splits": 0, "counted": 0, "incomplete": []}
     count_noise = bool(noise_user and noise_asset and not opts.no_noise_count)
     cache_key = {"noise_user": noise_user, "noise_asset": noise_asset,
@@ -476,9 +485,14 @@ def collect(client: AuditClient, opts) -> dict:
             day_noise += got["counted"]
         for e in got["events"]:
             user = e.get("userEmail") or ""
-            if opts.exclude_techacct and user.endswith(TECHACCT):
-                noise[(day, user, e.get("assetType") or "", "fetched")] += 1
-                day_noise += 1
+            if user.endswith(TECHACCT):
+                tech.append(e)                      # feeds the api_* service tabs
+                if opts.exclude_techacct:
+                    noise[(day, user, e.get("assetType") or "", "fetched")] += 1
+                    day_noise += 1
+                else:
+                    kept.append(e)
+                    day_kept += 1
             else:
                 kept.append(e)
                 day_kept += 1
@@ -490,7 +504,7 @@ def collect(client: AuditClient, opts) -> dict:
                     f"{day_noise:>7,} noise  ({source}){flag}")
     if n_cached:
         logger.info(f"{n_cached} day(s) came from {cache_dir(opts.sandbox)}.")
-    return {"kept": kept, "noise": noise, "windows": windows,
+    return {"kept": kept, "noise": noise, "tech": tech, "windows": windows,
             "noise_user": noise_user, "noise_asset": noise_asset,
             "incomplete": stats["incomplete"], "splits": stats["splits"]}
 
@@ -590,6 +604,29 @@ def summarise(kept: list[dict]) -> dict:
             "by_asset_action": by_asset_action}
 
 
+def summarise_tech(tech: list[dict]) -> dict:
+    """Per @techacct (API / service) account, a service view: EVERY event is
+    counted (reads included, unlike the human 'what' which is changes-only),
+    broken down by (assetType, action). Keyed by the tech-account id."""
+    accts = defaultdict(lambda: {"events": 0, "days": set(), "first": None,
+                                 "last": None, "assets": Counter(),
+                                 "areas": Counter(), "acts": Counter()})
+    for e in tech:
+        user = e.get("userEmail") or "(no user)"
+        a = accts[user]
+        asset, action = e.get("assetType") or "", e.get("action") or ""
+        a["events"] += 1
+        a["assets"][asset] += 1
+        a["areas"][area_of(asset)] += 1
+        a["acts"][(asset, action)] += 1
+        ts = parse_ts(e.get("timestamp"))
+        if ts:
+            a["days"].add(ts.date())
+            a["first"] = min(a["first"] or ts, ts)
+            a["last"] = max(a["last"] or ts, ts)
+    return accts
+
+
 # ----------------------------------------------------------------------------
 # Workbook
 # ----------------------------------------------------------------------------
@@ -652,6 +689,19 @@ def write_xlsx(result: dict, opts, conf: dict, path: Path) -> Path:
     span = f"{a:%Y-%m-%d} to {b:%Y-%m-%d %H:%M} UTC ({opts.days} days)"
     DT = "yyyy-mm-dd hh:mm:ss"
 
+    # Service / API accounts (@techacct): fetched events carry full per-action
+    # detail; the noise account's bulk asset type is counted but never fetched.
+    tech_accts = summarise_tech(result.get("tech") or [])
+    counted_only = Counter()      # tech id -> bulk events counted, never fetched
+    bulk_asset = {}               # tech id -> its bulk assetType
+    for (d_, u_, t_, how_), n_ in noise.items():
+        if how_ == "counted only":
+            counted_only[u_] += n_
+            bulk_asset[u_] = t_
+    api_ids = sorted(set(tech_accts) | set(counted_only),
+                     key=lambda u: -(tech_accts[u]["events"] if u in tech_accts
+                                     else 0) - counted_only.get(u, 0))
+
     # ---- summary -----------------------------------------------------------
     noise_total = sum(noise.values())
     facts = [
@@ -666,6 +716,9 @@ def write_xlsx(result: dict, opts, conf: dict, path: Path) -> Path:
         ("Its bulk asset type (counted only)", result["noise_asset"] or "(none)"),
         ("Tech accounts kept?", "no" if opts.exclude_techacct else
          "yes, except the noise account's bulk asset type"),
+        ("API / service accounts (tech)", len(api_ids)),
+        ("  -- see tabs", "api_accounts (one row each) and api_activity "
+                          "(per assetType + action)"),
         ("Windows split to stay under the API cap", result["splits"]),
         ("INCOMPLETE windows (still at the cap at 1 s)", len(result["incomplete"])),
         ("Event type", "Core only (Enhanced events are nested in each Core "
@@ -746,6 +799,47 @@ def write_xlsx(result: dict, opts, conf: dict, path: Path) -> Path:
           "What people did. 'Users' is how many distinct people did it.",
           ["assetType", "action", "Events", "Users"], [36, 16, 12, 10],
           ([t, act, d["events"], len(d["users"])] for (t, act), d in aa))
+
+    # ---- api_accounts (service / tech accounts) ----------------------------
+    def _acct_row(u):
+        d = tech_accts.get(u)
+        fetched = d["events"] if d else 0
+        bulk = counted_only.get(u, 0)
+        top_acts = ", ".join(f"{a} / {act} ({n:,})"
+                             for (a, act), n in (d["acts"].most_common(5) if d else []))
+        return ([u, fetched + bulk, fetched, bulk,
+                 len(d["days"]) if d else 0,
+                 d["first"] if d else None, d["last"] if d else None]
+                + [d["areas"].get(ar, 0) if d else 0 for ar in AREA_NAMES]
+                + [top_acts, bulk_asset.get(u, "")])
+    sheet("api_accounts", f"API / service accounts  -  {span}",
+          "Every @techacct.adobe.com (API / service) account and what it did. "
+          "'Fetched events' are counted in full with per-action detail (see the "
+          "api_activity tab); 'Bulk (counted only)' is the noise account's "
+          "churn, counted but never pulled, so it has no day / area / action "
+          "detail. Busiest first. Times are UTC.",
+          ["Tech account", "Total events", "Fetched events", "Bulk (counted only)",
+           "Distinct days (fetched)", "First seen", "Last seen"] + AREA_NAMES
+          + ["Top 5 activities (assetType / action)", "Bulk asset type"],
+          [40, 13, 14, 16, 16, 18, 18] + [11] * len(AREA_NAMES) + [70, 22],
+          [_acct_row(u) for u in api_ids], {5: DT, 6: DT})
+
+    # ---- api_activity: one row per (account, assetType, action) ------------
+    act_rows = []
+    for u in api_ids:
+        d = tech_accts.get(u)
+        if d:
+            for (asset, action), n in sorted(d["acts"].items(), key=lambda kv: -kv[1]):
+                act_rows.append([u, asset, action, n])
+        if counted_only.get(u):
+            act_rows.append([u, bulk_asset.get(u, ""), "(bulk, counted only)",
+                             counted_only[u]])
+    sheet("api_activity", f"API / service activity  -  {span}",
+          "Every service account's activity, one row per account / assetType / "
+          "action. '(bulk, counted only)' rows are the noise account's churn, "
+          "counted but not fetched, so they carry no action detail.",
+          ["Tech account", "assetType", "action", "Events"], [40, 32, 26, 12],
+          act_rows)
 
     # ---- excluded_noise ----------------------------------------------------
     sheet("excluded_noise", "Excluded tech-account events",
