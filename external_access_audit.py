@@ -105,7 +105,14 @@ _HEADER_BG = "1F4E78"
 # groups) carry the product in their name and nothing in productName.
 AEP_RE = re.compile(
     r"experience platform|customer journey analytics|journey optimi|"
-    r"real.?time customer|rtcdp|ajo|cja", re.I)
+    r"real.?time customer|rtcdp|ajo|cja|aep", re.I)
+# NOTE on the bare "aep": most people here do NOT get Platform access through
+# a product profile. They get it through an AD group nested into one --
+# names like "GG-UK-<org>-PROD-AdobeAEP-Analyst". Those groups carry no
+# productName, so matching only on product names missed 120 distinct groups
+# and produced 67 accounts that were visibly using Platform every day while
+# the report claimed they had no entitlement at all. "aep" is matched as a
+# substring rather than a whole word precisely so "AdobeAEP" is caught.
 # Everything deliberately OUT of scope -- somebody else's estate. Checked
 # FIRST so a loose match elsewhere can never drag one of these back in, and
 # counted on the Summary tab so you can see they were considered, not missed.
@@ -780,6 +787,13 @@ def main():
             logger.info(f"  {sb}: {len(activity):,} distinct account(s) seen "
                         f"so far.")
 
+    # The sweep stashes its lost-window report under a reserved key. Take it
+    # out BEFORE anything iterates `activity` as if every value were a user
+    # record -- leaving it in crashed the tech-account tally at the very end
+    # of a two-hour run, after all the work was done and before anything was
+    # written.
+    incomplete = activity.pop("__incomplete__", {})
+
     for p in people:
         act = activity.get(p["email"].lower())
         if act:
@@ -812,7 +826,6 @@ def main():
         p["verdict"] = verdict_for(p, p["checked"])
 
     # ---- Verify the removal list the accurate way --------------------------
-    incomplete = activity.pop("__incomplete__", {})
     verified = {}
     if not opts.no_activity and not opts.no_verify:
         candidates = [p for p in people
